@@ -19,11 +19,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   private startGame(): void {
+    const getElementById = <T extends HTMLElement>(id: string): T =>
+      document.getElementById(id) as T;
 
-
-    const canvas = document.getElementById('c');
+    const canvas = getElementById<HTMLCanvasElement>('c');
     const ctx = canvas.getContext('2d');
-    const wrap = document.getElementById('canvas-wrap');
+    const wrap = getElementById<HTMLElement>('canvas-wrap');
 
     let W = 0;
     let H = 0;
@@ -461,9 +462,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let moneySum = 0;
     let moneySamples = 0;
 
-    const collisionGraphCanvas = document.getElementById('collision-graph');
+    const collisionGraphCanvas = getElementById<HTMLCanvasElement>('collision-graph');
     const collisionGraphCtx = collisionGraphCanvas.getContext('2d');
-    const moneyGraphCanvas = document.getElementById('money-graph');
+    const moneyGraphCanvas = getElementById<HTMLCanvasElement>('money-graph');
     const moneyGraphCtx = moneyGraphCanvas.getContext('2d');
 
     loadGame();
@@ -568,7 +569,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         collisionMax.toLocaleString('de-DE', { maximumFractionDigits: 1 });
       document.getElementById('dash-collisions-avg').textContent =
         collisionAverage.toLocaleString('de-DE', { maximumFractionDigits: 1 });
-      document.getElementById('dash-n').textContent = objects.length;
+      document.getElementById('dash-n').textContent = objects.length.toString();
 
       document.getElementById('dash-money').textContent =
         state.moneyPerSec.toLocaleString('de-DE', { maximumFractionDigits: 0 });
@@ -1198,7 +1199,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         objects.length >= getMaxBalls();
 
       const spawnButton =
-        document.getElementById('btn-spawn');
+        getElementById<HTMLButtonElement>('btn-spawn');
 
       spawnButton.disabled =
         coins < ballCost ||
@@ -1223,7 +1224,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         const cost = getCost(key, level);
 
         const button =
-          document.getElementById(buttonId);
+          getElementById<HTMLButtonElement>(buttonId);
 
         const costElement =
           document.getElementById(costId);
@@ -1282,7 +1283,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         'cost-launch'
       );
 
-      const prestigeButton = document.getElementById('btn-prestige');
+      const prestigeButton = getElementById<HTMLButtonElement>('btn-prestige');
       const prestigeCostElement = document.getElementById('cost-prestige');
       const prestigeCost = getPrestigeCost();
 
