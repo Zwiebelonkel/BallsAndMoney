@@ -1,0 +1,156 @@
+<div id="root">
+
+  <div id="canvas-wrap">
+
+    <canvas id="c"></canvas>
+
+    <div id="ui">
+      <div id="top-bar">
+        <div class="pill" id="coins-pill">
+          💰 <span id="coins-val">0</span>
+        </div>
+
+        <div class="pill" id="col-pill">
+          💥 <span id="col-val">0</span>/s
+        </div>
+
+        <div class="pill" id="combo-pill" style="opacity:0">
+          🔥 x<span id="combo-val">1</span>
+        </div>
+      </div>
+
+      <div id="hint-msg">
+        Drag/Touch → Kugel schießen · Kurzer Tipp/Klick = zufällig
+      </div>
+    </div>
+
+    <div id="float-coins"></div>
+
+    <div id="dashboard">
+
+      <div class="graph-grid">
+        <div class="graph-card">
+          <div class="dash-header">
+            <span class="dash-label">Kollisionen</span>
+          </div>
+
+          <div>
+            <span id="dash-collisions">0</span>
+            <span class="dash-collisions-unit">/s</span>
+          </div>
+
+          <canvas id="collision-graph" width="205" height="54"></canvas>
+
+          <div class="dash-sub">
+            <div class="dash-stat">max <span id="dash-collisions-max">0</span></div>
+            <div class="dash-stat">Ø <span id="dash-collisions-avg">0</span></div>
+            <div class="dash-stat">Kugeln <span id="dash-n">0</span></div>
+          </div>
+        </div>
+
+        <div class="graph-card">
+          <div class="dash-header">
+            <span class="dash-label">Money</span>
+          </div>
+
+          <div>
+            <span id="dash-money">0</span>
+            <span class="dash-collisions-unit">/s</span>
+          </div>
+
+          <canvas id="money-graph" width="205" height="54"></canvas>
+
+          <div class="dash-sub">
+            <div class="dash-stat">max <span id="dash-money-max">0</span></div>
+            <div class="dash-stat">Ø <span id="dash-money-avg">0</span></div>
+            <div class="dash-stat">Global x<span id="dash-global-mult">1</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="shop">
+
+    <div id="shop-header">
+      <h2>Shop</h2>
+      <p>Kollisionen = Münzen</p>
+    </div>
+
+    <div id="shop-items">
+
+      <div class="section-label">Kugeln</div>
+
+      <button class="upgrade-btn" id="btn-spawn">
+        <div class="btn-name">Neue Kugel</div>
+        <div class="btn-desc">+1 Kugel im Feld</div>
+        <div class="btn-cost" id="cost-spawn">35 🪙</div>
+      </button>
+
+      <div class="section-label">Upgrades</div>
+
+      <button class="upgrade-btn" id="btn-size">
+        <div class="btn-name">Größe +</div>
+        <div class="btn-desc">Nur neue Kugeln wachsen leicht</div>
+        <div class="btn-cost" id="cost-size">90 🪙</div>
+      </button>
+
+      <button class="upgrade-btn" id="btn-mult">
+        <div class="btn-name">Multiplikator</div>
+        <div class="btn-desc">Etwas mehr Münzen pro Kollision</div>
+        <div class="btn-cost" id="cost-mult">180 🪙</div>
+      </button>
+
+      <button class="upgrade-btn" id="btn-cap">
+        <div class="btn-name">Kapazität +</div>
+        <div class="btn-desc">Maximale Kugeln +1</div>
+        <div class="btn-cost" id="cost-cap">260 🪙</div>
+      </button>
+
+      <button class="upgrade-btn" id="btn-combo">
+        <div class="btn-name">Combo-Bonus</div>
+        <div class="btn-desc">Schnelle Kollisionen geben Bonus</div>
+        <div class="btn-cost" id="cost-combo">320 🪙</div>
+      </button>
+
+      <button class="upgrade-btn" id="btn-launch">
+        <div class="btn-name">Launch-Power</div>
+        <div class="btn-desc">Neue Kugeln starten kräftiger</div>
+        <div class="btn-cost" id="cost-launch">110 🪙</div>
+      </button>
+
+      <div class="section-label">Prestige</div>
+
+      <button class="upgrade-btn" id="btn-prestige">
+        <div class="btn-name">Prestige</div>
+        <div class="btn-desc">Reset für permanenten globalen Geld-Multiplikator</div>
+        <div class="btn-cost" id="cost-prestige">5.000.000 🪙</div>
+      </button>
+
+      <div class="section-label">Anzeige</div>
+
+      <button class="setting-btn" id="btn-theme" type="button">
+        Theme wechseln
+        <span class="setting-value" id="theme-val">Dark</span>
+      </button>
+
+      <button class="setting-btn" id="btn-color-mode" type="button">
+        Farbmodus wechseln
+        <span class="setting-value" id="color-mode-val">Farben aktiv</span>
+      </button>
+
+      <button class="setting-btn" id="btn-graph" type="button">
+        Graph umschalten
+        <span class="setting-value" id="graph-val">Sichtbar</span>
+      </button>
+
+      <button class="setting-btn danger" id="btn-reset" type="button">
+        Spielstand zurücksetzen
+        <span class="setting-value">Reset</span>
+      </button>
+
+    </div>
+  </div>
+
+</div>
