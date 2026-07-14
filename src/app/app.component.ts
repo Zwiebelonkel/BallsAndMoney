@@ -220,7 +220,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function getArenaScale(ballCount = objects.length){
-      return 1 + Math.floor(ballCount / 5) * 0.85;
+      return 1 + Math.floor(ballCount / 6) * 0.35;
     }
 
     function getBaseR(ballCount = objects.length){
@@ -1238,7 +1238,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         `Global x${getNextGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 })}`;
       document.getElementById('prestige-panel-cost').textContent =
         prestigeCost.toLocaleString('de-DE') + ' 🪙';
-      getElementById<HTMLButtonElement>('btn-prestige-confirm').disabled = coins < prestigeCost;
+      const prestigeConfirmButton = getElementById<HTMLButtonElement>('btn-prestige-confirm');
+      prestigeConfirmButton.disabled = false;
+      prestigeConfirmButton.className =
+        'upgrade-btn danger' + (coins >= prestigeCost ? ' can-afford' : '');
     }
 
     function getPrestigeCost(){
@@ -1250,8 +1253,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function performPrestige(){
-      if(state.coins < getPrestigeCost()){
-        return;
+      const prestigeCost = getPrestigeCost();
+
+      if(state.coins < prestigeCost){
+        alert(
+          'Prestige benötigt ' +
+          prestigeCost.toLocaleString('de-DE') +
+          ' 🪙. Dir fehlen noch ' +
+          Math.ceil(prestigeCost - state.coins).toLocaleString('de-DE') +
+          ' 🪙.'
+        );
+        return false;
       }
 
       state.prestige = (state.prestige || 0) + 1;
@@ -1282,6 +1294,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       updateUI();
       updateHintMsg();
       saveGame();
+
+      return true;
     }
 
     function grantAdminMoney(){
@@ -1396,8 +1410,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     document
       .getElementById('btn-prestige-confirm')
       .addEventListener('click', () => {
-        performPrestige();
-        closePrestigePanel();
+        if(performPrestige()){
+          closePrestigePanel();
+        }
       });
 
     const adminCode = '1906';
