@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <title>Ball Idle Game</title>
 
@@ -11,6 +11,8 @@
   box-sizing:border-box;
   margin:0;
   padding:0;
+  -webkit-user-select:none;
+  user-select:none;
 }
 
 :root{
@@ -69,12 +71,21 @@ body{
   overflow:hidden;
   width:100vw;
   height:100vh;
+  overscroll-behavior:none;
+  touch-action:none;
+  -webkit-text-size-adjust:100%;
 }
 
 #root{
   display:flex;
   width:100%;
   height:100vh;
+}
+
+button,
+canvas{
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
 }
 
 #canvas-wrap{
@@ -303,7 +314,7 @@ canvas{
   letter-spacing:.1em;
 }
 
-#dash-ke{
+#dash-collisions{
   font-size:20px;
   font-weight:500;
   font-family:ui-monospace,monospace;
@@ -311,13 +322,13 @@ canvas{
   line-height:1;
 }
 
-#dash-ke-unit{
+#dash-collisions-unit{
   font-size:10px;
   color:var(--muted);
   margin-left:2px;
 }
 
-#ke-graph{
+#collision-graph{
   display:block;
   width:100%;
   height:54px;
@@ -465,23 +476,23 @@ body.graph-hidden #dashboard{
     <div id="dashboard">
 
       <div id="dash-header">
-        <span id="dash-label">Kinetische Energie</span>
+        <span id="dash-label">Kollisionen</span>
       </div>
 
       <div>
-        <span id="dash-ke">0</span>
-        <span id="dash-ke-unit">J</span>
+        <span id="dash-collisions">0</span>
+        <span id="dash-collisions-unit">/s</span>
       </div>
 
-      <canvas id="ke-graph" width="196" height="54"></canvas>
+      <canvas id="collision-graph" width="196" height="54"></canvas>
 
       <div id="dash-sub">
         <div class="dash-stat">
-          max <span id="dash-kemax">0</span>
+          max <span id="dash-collisions-max">0</span>
         </div>
 
         <div class="dash-stat">
-          Ø <span id="dash-keavg">0</span>
+          Ø <span id="dash-collisions-avg">0</span>
         </div>
 
         <div class="dash-stat">
@@ -619,6 +630,36 @@ function resize(){
 resize();
 
 new ResizeObserver(resize).observe(wrap);
+
+
+function blockBrowserZoom(){
+  const block = event => {
+    event.preventDefault();
+  };
+
+  window.addEventListener('gesturestart', block, { passive: false });
+  window.addEventListener('gesturechange', block, { passive: false });
+  window.addEventListener('gestureend', block, { passive: false });
+
+  window.addEventListener('wheel', event => {
+    if(event.ctrlKey || event.metaKey){
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  window.addEventListener('keydown', event => {
+    const key = event.key;
+
+    if(
+      (event.ctrlKey || event.metaKey) &&
+      (key === '+' || key === '-' || key === '=' || key === '0')
+    ){
+      event.preventDefault();
+    }
+  });
+}
+
+blockBrowserZoom();
 
 const SAVE_KEY = 'ballsAndMoneySave';
 
@@ -867,10 +908,10 @@ function resetGame(){
   objects = [];
   objectIndex = 0;
   hueIdx = 0;
-  keMax = 0;
-  keSum = 0;
-  keSamples = 0;
-  keHistory.fill(0);
+  collisionMax = 0;
+  collisionSum = 0;
+  collisionSamples = 0;
+  collisionHistory.fill(0);
 
   for(let i = 0; i < 3; i++){
     spawnRandom();
@@ -928,16 +969,16 @@ function spawnRandom(){
   return true;
 }
 
-/* Kinetische-Energie-Diagramm */
+/* Kollisions-Diagramm */
 
-const KE_LENGTH = 120;
-const keHistory = new Array(KE_LENGTH).fill(0);
+const COLLISION_GRAPH_LENGTH = 120;
+const collisionHistory = new Array(COLLISION_GRAPH_LENGTH).fill(0);
 
-let keMax = 0;
-let keSum = 0;
-let keSamples = 0;
+let collisionMax = 0;
+let collisionSum = 0;
+let collisionSamples = 0;
 
-const graphCanvas = document.getElementById('ke-graph');
+const graphCanvas = document.getElementById('collision-graph');
 const graphCtx = graphCanvas.getContext('2d');
 
 if(!loadGame() || objects.length === 0){
@@ -946,22 +987,22 @@ if(!loadGame() || objects.length === 0){
   }
 }
 
-function drawKEGraph(ke){
-  keHistory.push(ke);
+function drawCollisionGraph(collisionsPerSecond){
+  collisionHistory.push(collisionsPerSecond);
 
-  if(keHistory.length > KE_LENGTH){
-    keHistory.shift();
+  if(collisionHistory.length > COLLISION_GRAPH_LENGTH){
+    collisionHistory.shift();
   }
 
-  if(ke > keMax){
-    keMax = ke;
+  if(collisionsPerSecond > collisionMax){
+    collisionMax = collisionsPerSecond;
   }
 
-  keSum += ke;
-  keSamples++;
+  collisionSum += collisionsPerSecond;
+  collisionSamples++;
 
-  const average = keSamples > 0
-    ? keSum / keSamples
+  const average = collisionSamples > 0
+    ? collisionSum / collisionSamples
     : 0;
 
   const GW = graphCanvas.width;
@@ -984,12 +1025,12 @@ function drawKEGraph(ke){
     graphCtx.stroke();
   }
 
-  const peak = Math.max(...keHistory, 1);
+  const peak = Math.max(...collisionHistory, 1);
 
   graphCtx.beginPath();
 
-  keHistory.forEach((value, index) => {
-    const x = index / (KE_LENGTH - 1) * GW;
+  collisionHistory.forEach((value, index) => {
+    const x = index / (COLLISION_GRAPH_LENGTH - 1) * GW;
     const y = GH - value / peak * (GH - 2) - 1;
 
     if(index === 0){
@@ -1013,8 +1054,8 @@ function drawKEGraph(ke){
 
   graphCtx.beginPath();
 
-  keHistory.forEach((value, index) => {
-    const x = index / (KE_LENGTH - 1) * GW;
+  collisionHistory.forEach((value, index) => {
+    const x = index / (COLLISION_GRAPH_LENGTH - 1) * GW;
     const y = GH - value / peak * (GH - 2) - 1;
 
     if(index === 0){
@@ -1028,14 +1069,14 @@ function drawKEGraph(ke){
   graphCtx.lineWidth = 1.5;
   graphCtx.stroke();
 
-  document.getElementById('dash-ke').textContent =
-    Math.round(ke).toLocaleString('de-DE');
+  document.getElementById('dash-collisions').textContent =
+    collisionsPerSecond.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 
-  document.getElementById('dash-kemax').textContent =
-    Math.round(keMax).toLocaleString('de-DE');
+  document.getElementById('dash-collisions-max').textContent =
+    collisionMax.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 
-  document.getElementById('dash-keavg').textContent =
-    Math.round(average).toLocaleString('de-DE');
+  document.getElementById('dash-collisions-avg').textContent =
+    average.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 
   document.getElementById('dash-n').textContent =
     objects.length;
@@ -1368,57 +1409,102 @@ function drawBall(ball){
 
 /* Hauptschleife */
 
+const FRAME_MS = 16.67;
+const MAX_SIMULATION_DELTA = 3;
+const MAX_CATCH_UP_MS = 30000;
+
 let lastTime = performance.now();
-
-function loop(now){
-  requestAnimationFrame(loop);
-
-  const delta = Math.min(
-    (now - lastTime) / 16.67,
-    3
-  );
-
-  lastTime = now;
-
-  ctx.fillStyle = cssVar('--bg');
-  ctx.fillRect(0, 0, W, H);
-
-  drawGrid();
-
+let lastBackgroundTime = lastTime;
+function simulateStep(delta, shouldDraw){
   for(const ball of objects){
     ball.x += ball.vx * delta;
     ball.y += ball.vy * delta;
 
     wallBounce(ball);
 
-    ball.trail.push({
-      x: ball.x,
-      y: ball.y
-    });
+    if(shouldDraw){
+      ball.trail.push({
+        x: ball.x,
+        y: ball.y
+      });
 
-    if(ball.trail.length > 18){
-      ball.trail.shift();
+      if(ball.trail.length > 18){
+        ball.trail.shift();
+      }
     }
-
-    drawBall(ball);
   }
 
   collide();
+}
 
-  let totalKineticEnergy = 0;
+function simulateElapsed(elapsedMs, shouldDraw){
+  const cappedElapsedMs = Math.min(
+    Math.max(elapsedMs, 0),
+    MAX_CATCH_UP_MS
+  );
+
+  let remainingDelta = cappedElapsedMs / FRAME_MS;
+
+  while(remainingDelta > 0){
+    const delta = Math.min(
+      remainingDelta,
+      MAX_SIMULATION_DELTA
+    );
+
+    simulateStep(delta, shouldDraw && remainingDelta <= MAX_SIMULATION_DELTA);
+    remainingDelta -= delta;
+  }
+}
+
+function drawFrame(){
+  ctx.fillStyle = cssVar('--bg');
+  ctx.fillRect(0, 0, W, H);
+
+  drawGrid();
 
   for(const ball of objects){
-    const speedSquared =
-      ball.vx * ball.vx +
-      ball.vy * ball.vy;
-
-    totalKineticEnergy +=
-      0.5 *
-      ball.m *
-      speedSquared;
+    drawBall(ball);
   }
 
-  drawKEGraph(totalKineticEnergy);
+  drawCollisionGraph(state.colPerSec);
+}
+
+function updateCollisionRate(now){
+  if(now - state.lastColT <= 800){
+    return;
+  }
+
+  const elapsed =
+    (now - state.lastColT) / 1000;
+
+  state.colPerSec =
+    Math.round(
+      state.colCount /
+      elapsed *
+      10
+    ) / 10;
+
+  state.colCount = 0;
+  state.lastColT = now;
+
+  document.getElementById('col-val').textContent =
+    state.colPerSec.toFixed(1);
+}
+
+function loop(now){
+  requestAnimationFrame(loop);
+
+  if(document.hidden){
+    lastTime = now;
+    return;
+  }
+
+  simulateElapsed(now - lastTime, true);
+  lastTime = now;
+  lastBackgroundTime = now;
+
+  updateCollisionRate(now);
+  drawFrame();
 
   if(drag.active){
     const dx = drag.startX - drag.x;
@@ -1522,26 +1608,38 @@ function loop(now){
     }
   }
 
-  if(now - state.lastColT > 800){
-    const elapsed =
-      (now - state.lastColT) / 1000;
-
-    state.colPerSec =
-      Math.round(
-        state.colCount /
-        elapsed *
-        10
-      ) / 10;
-
-    state.colCount = 0;
-    state.lastColT = now;
-
-    document.getElementById('col-val').textContent =
-      state.colPerSec.toFixed(1);
-  }
 }
 
 requestAnimationFrame(loop);
+
+setInterval(() => {
+  if(!document.hidden){
+    return;
+  }
+
+  const now = performance.now();
+
+  simulateElapsed(now - lastBackgroundTime, false);
+  updateCollisionRate(now);
+  lastBackgroundTime = now;
+  lastTime = now;
+  drawCollisionGraph(state.colPerSec);
+}, 1000);
+
+document.addEventListener('visibilitychange', () => {
+  const now = performance.now();
+
+  if(document.hidden){
+    drag.active = false;
+    lastBackgroundTime = now;
+  } else {
+    simulateElapsed(now - lastBackgroundTime, false);
+    updateCollisionRate(now);
+    lastTime = now;
+    lastBackgroundTime = now;
+    updateUI();
+  }
+});
 
 /* UI */
 
