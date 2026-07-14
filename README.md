@@ -15,6 +15,6 @@ npm start
 npm run build
 ```
 
-## GitHub Pages Deploy
+## GitHub Pages Deploys
 
 Der Workflow `.github/workflows/deploy.yml` baut die Angular-App bei Pushes auf `main` und veröffentlicht den Inhalt aus `dist/balls-and-money/browser` über GitHub Pages.
