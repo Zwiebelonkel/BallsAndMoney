@@ -13,9 +13,43 @@
   padding:0;
 }
 
+:root{
+  --bg:#080812;
+  --text:#e4e2f0;
+  --panel-bg:rgba(8,8,18,0.95);
+  --surface-bg:rgba(10,10,25,0.82);
+  --surface-soft:rgba(255,255,255,0.03);
+  --surface-hover:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.1);
+  --border-soft:rgba(255,255,255,0.07);
+  --muted:rgba(255,255,255,0.4);
+  --muted-strong:rgba(255,255,255,0.6);
+  --accent:#FAC775;
+  --good:#9FE1CB;
+  --grid:rgba(255,255,255,0.018);
+  --graph-bg:rgba(0,0,0,0.3);
+}
+
+body.theme-light{
+  --bg:#f4f0e8;
+  --text:#1f2530;
+  --panel-bg:rgba(255,255,255,0.96);
+  --surface-bg:rgba(255,255,255,0.86);
+  --surface-soft:rgba(0,0,0,0.035);
+  --surface-hover:rgba(0,0,0,0.07);
+  --border:rgba(31,37,48,0.16);
+  --border-soft:rgba(31,37,48,0.1);
+  --muted:rgba(31,37,48,0.48);
+  --muted-strong:rgba(31,37,48,0.7);
+  --accent:#b16b00;
+  --good:#147d64;
+  --grid:rgba(31,37,48,0.055);
+  --graph-bg:rgba(255,255,255,0.35);
+}
+
 body{
-  background:#080812;
-  color:#e4e2f0;
+  background:var(--bg);
+  color:var(--text);
   font-family:system-ui,sans-serif;
   overflow:hidden;
   width:100vw;
@@ -60,18 +94,18 @@ canvas{
 }
 
 .pill{
-  background:rgba(10,10,25,0.82);
-  border:0.5px solid rgba(255,255,255,0.12);
+  background:var(--surface-bg);
+  border:0.5px solid var(--border);
   border-radius:20px;
   padding:5px 14px;
   font-size:12px;
-  color:rgba(255,255,255,0.8);
+  color:var(--muted-strong);
   font-family:ui-monospace,monospace;
   white-space:nowrap;
 }
 
 .pill span{
-  color:#FAC775;
+  color:var(--accent);
   font-weight:600;
 }
 
@@ -85,8 +119,8 @@ canvas{
 
 #shop{
   width:200px;
-  background:rgba(8,8,18,0.95);
-  border-left:0.5px solid rgba(255,255,255,0.09);
+  background:var(--panel-bg);
+  border-left:0.5px solid var(--border-soft);
   display:flex;
   flex-direction:column;
   overflow:hidden;
@@ -95,19 +129,19 @@ canvas{
 
 #shop-header{
   padding:10px 12px 6px;
-  border-bottom:0.5px solid rgba(255,255,255,0.07);
+  border-bottom:0.5px solid var(--border-soft);
 }
 
 #shop-header h2{
   font-size:13px;
   font-weight:500;
-  color:rgba(255,255,255,0.9);
+  color:var(--text);
   margin-bottom:2px;
 }
 
 #shop-header p{
   font-size:10px;
-  color:rgba(255,255,255,0.35);
+  color:var(--muted);
 }
 
 #shop-items{
@@ -121,7 +155,7 @@ canvas{
 }
 
 #shop-items::-webkit-scrollbar-thumb{
-  background:rgba(255,255,255,0.12);
+  background:var(--border);
   border-radius:2px;
 }
 
@@ -129,10 +163,10 @@ canvas{
   width:100%;
   margin-bottom:6px;
   padding:7px 9px;
-  border:0.5px solid rgba(255,255,255,0.1);
+  border:0.5px solid var(--border);
   border-radius:8px;
-  background:rgba(255,255,255,0.03);
-  color:#e4e2f0;
+  background:var(--surface-soft);
+  color:var(--text);
   cursor:pointer;
   text-align:left;
   transition:all .15s;
@@ -140,8 +174,8 @@ canvas{
 }
 
 .upgrade-btn:hover:not(:disabled){
-  background:rgba(255,255,255,0.07);
-  border-color:rgba(255,255,255,0.18);
+  background:var(--surface-hover);
+  border-color:var(--border);
 }
 
 .upgrade-btn:disabled{
@@ -162,20 +196,20 @@ canvas{
 .btn-name{
   font-size:11px;
   font-weight:500;
-  color:#e4e2f0;
+  color:var(--text);
   line-height:1.3;
 }
 
 .btn-desc{
   font-size:10px;
-  color:rgba(255,255,255,0.4);
+  color:var(--muted);
   margin:1px 0 3px;
   line-height:1.3;
 }
 
 .btn-cost{
   font-size:10px;
-  color:#FAC775;
+  color:var(--accent);
   font-family:ui-monospace,monospace;
 }
 
@@ -185,7 +219,7 @@ canvas{
 
 .section-label{
   font-size:10px;
-  color:rgba(255,255,255,0.25);
+  color:var(--muted);
   text-transform:uppercase;
   letter-spacing:.08em;
   margin:10px 0 4px 2px;
@@ -205,7 +239,7 @@ canvas{
   position:absolute;
   font-size:11px;
   font-family:ui-monospace,monospace;
-  color:#FAC775;
+  color:var(--accent);
   pointer-events:none;
   animation:floatUp 1.1s ease-out forwards;
 }
@@ -224,7 +258,7 @@ canvas{
 
 #hint-msg{
   font-size:10px;
-  color:rgba(255,255,255,0.25);
+  color:var(--muted);
   text-align:center;
 }
 
@@ -232,8 +266,8 @@ canvas{
   position:absolute;
   bottom:10px;
   left:10px;
-  background:rgba(8,8,20,0.88);
-  border:0.5px solid rgba(255,255,255,0.1);
+  background:var(--surface-bg);
+  border:0.5px solid var(--border);
   border-radius:10px;
   padding:10px 12px;
   pointer-events:none;
@@ -249,7 +283,7 @@ canvas{
 
 #dash-label{
   font-size:9px;
-  color:rgba(255,255,255,0.3);
+  color:var(--muted);
   text-transform:uppercase;
   letter-spacing:.1em;
 }
@@ -258,13 +292,13 @@ canvas{
   font-size:20px;
   font-weight:500;
   font-family:ui-monospace,monospace;
-  color:#9FE1CB;
+  color:var(--good);
   line-height:1;
 }
 
 #dash-ke-unit{
   font-size:10px;
-  color:rgba(255,255,255,0.28);
+  color:var(--muted);
   margin-left:2px;
 }
 
@@ -284,12 +318,101 @@ canvas{
 
 .dash-stat{
   font-size:9px;
-  color:rgba(255,255,255,0.28);
+  color:var(--muted);
   font-family:ui-monospace,monospace;
 }
 
 .dash-stat span{
-  color:rgba(255,255,255,0.6);
+  color:var(--muted-strong);
+}
+
+.setting-btn{
+  width:100%;
+  margin-bottom:6px;
+  padding:7px 9px;
+  border:0.5px solid var(--border);
+  border-radius:8px;
+  background:var(--surface-soft);
+  color:var(--text);
+  cursor:pointer;
+  text-align:left;
+  font-family:system-ui,sans-serif;
+}
+
+.setting-btn:hover{
+  background:var(--surface-hover);
+}
+
+.setting-value{
+  display:block;
+  margin-top:2px;
+  color:var(--accent);
+  font-size:10px;
+  font-family:ui-monospace,monospace;
+}
+
+.setting-btn.danger{
+  border-color:rgba(216,90,48,0.35);
+}
+
+.setting-btn.danger .setting-value{
+  color:#D85A30;
+}
+
+body.graph-hidden #dashboard{
+  display:none;
+}
+
+@media (max-width:720px){
+  body{
+    overflow:auto;
+  }
+
+  #root{
+    flex-direction:column;
+    min-height:100vh;
+    height:100dvh;
+  }
+
+  #canvas-wrap{
+    min-height:55dvh;
+  }
+
+  #top-bar{
+    flex-wrap:wrap;
+  }
+
+  #shop{
+    width:100%;
+    max-height:45dvh;
+    border-left:0;
+    border-top:0.5px solid var(--border-soft);
+  }
+
+  #shop-items{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:6px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  #shop-items .section-label{
+    grid-column:1/-1;
+    margin-top:4px;
+  }
+
+  .upgrade-btn,
+  .setting-btn{
+    min-height:56px;
+    margin-bottom:0;
+  }
+
+  #dashboard{
+    left:8px;
+    bottom:8px;
+    width:min(210px,calc(100% - 16px));
+  }
 }
 </style>
 </head>
@@ -403,6 +526,28 @@ canvas{
         <div class="btn-cost" id="cost-combo">320 🪙</div>
       </button>
 
+      <div class="section-label">Anzeige</div>
+
+      <button class="setting-btn" id="btn-theme" type="button">
+        Theme wechseln
+        <span class="setting-value" id="theme-val">Dark</span>
+      </button>
+
+      <button class="setting-btn" id="btn-color-mode" type="button">
+        Farbmodus wechseln
+        <span class="setting-value" id="color-mode-val">Farben aktiv</span>
+      </button>
+
+      <button class="setting-btn" id="btn-graph" type="button">
+        Graph umschalten
+        <span class="setting-value" id="graph-val">Sichtbar</span>
+      </button>
+
+      <button class="setting-btn danger" id="btn-reset" type="button">
+        Spielstand zurücksetzen
+        <span class="setting-value">Reset</span>
+      </button>
+
     </div>
   </div>
 
@@ -418,9 +563,12 @@ const wrap = document.getElementById('canvas-wrap');
 let W = 0;
 let H = 0;
 
+const MIN_ARENA_W = 900;
+const MIN_ARENA_H = 560;
+
 function resize(){
-  W = wrap.clientWidth;
-  H = wrap.clientHeight;
+  W = Math.max(W, wrap.clientWidth, MIN_ARENA_W);
+  H = Math.max(H, wrap.clientHeight, MIN_ARENA_H);
 
   canvas.width = W;
   canvas.height = H;
@@ -429,6 +577,14 @@ function resize(){
 resize();
 
 new ResizeObserver(resize).observe(wrap);
+
+const SAVE_KEY = 'ballsAndMoneySave';
+
+const preferences = {
+  theme: 'dark',
+  colorMode: 'color',
+  graphVisible: true
+};
 
 const COLORS = [
   '#4a8fd4',
@@ -444,6 +600,31 @@ const COLORS = [
 ];
 
 let hueIdx = 0;
+
+function getCanvasPoint(event){
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+    x: (event.clientX - rect.left) * (canvas.width / rect.width),
+    y: (event.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function cssVar(name){
+  return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+
+function displayColor(color){
+  return preferences.colorMode === 'mono' ? '#f2f2f2' : color;
+}
+
+function applyPreferences(){
+  document.body.classList.toggle('theme-light', preferences.theme === 'light');
+  document.body.classList.toggle('graph-hidden', !preferences.graphVisible);
+  document.getElementById('theme-val').textContent = preferences.theme === 'light' ? 'Light' : 'Dark';
+  document.getElementById('color-mode-val').textContent = preferences.colorMode === 'mono' ? 'Schwarz-Weiß' : 'Farben aktiv';
+  document.getElementById('graph-val').textContent = preferences.graphVisible ? 'Sichtbar' : 'Ausgeblendet';
+}
 
 const state = {
   coins: 0,
@@ -520,6 +701,136 @@ function getSpeedMultiplier(){
 
 let objects = [];
 let objectIndex = 0;
+let saveTimer = 0;
+
+function getSaveData(){
+  return {
+    version: 1,
+    state: {
+      coins: state.coins
+    },
+    upgrades: { ...upgrades },
+    preferences: { ...preferences },
+    arena: {
+      w: W,
+      h: H
+    },
+    hueIdx,
+    objectIndex,
+    objects: objects.map(ball => ({
+      id: ball.id,
+      x: ball.x,
+      y: ball.y,
+      vx: ball.vx,
+      vy: ball.vy,
+      r: ball.r,
+      m: ball.m,
+      col: ball.col
+    }))
+  };
+}
+
+function saveGame(){
+  localStorage.setItem(SAVE_KEY, JSON.stringify(getSaveData()));
+}
+
+function queueSave(){
+  clearTimeout(saveTimer);
+
+  saveTimer = setTimeout(saveGame, 250);
+}
+
+function loadGame(){
+  const raw = localStorage.getItem(SAVE_KEY);
+
+  if(!raw){
+    return false;
+  }
+
+  try{
+    const data = JSON.parse(raw);
+
+    if(data.state && Number.isFinite(data.state.coins)){
+      state.coins = data.state.coins;
+    }
+
+    if(data.upgrades){
+      for(const key of Object.keys(upgrades)){
+        if(Number.isFinite(data.upgrades[key])){
+          upgrades[key] = data.upgrades[key];
+        }
+      }
+    }
+
+    if(data.preferences){
+      Object.assign(preferences, data.preferences);
+    }
+
+    if(data.arena){
+      W = Math.max(W, data.arena.w || 0);
+      H = Math.max(H, data.arena.h || 0);
+      resize();
+    }
+
+    hueIdx = Number.isFinite(data.hueIdx) ? data.hueIdx : hueIdx;
+    objectIndex = Number.isFinite(data.objectIndex) ? data.objectIndex : objectIndex;
+
+    if(Array.isArray(data.objects)){
+      objects = data.objects
+        .filter(ball => Number.isFinite(ball.x) && Number.isFinite(ball.y))
+        .map(ball => ({
+          id: Number.isFinite(ball.id) ? ball.id : objectIndex++,
+          x: ball.x,
+          y: ball.y,
+          vx: Number.isFinite(ball.vx) ? ball.vx : 0,
+          vy: Number.isFinite(ball.vy) ? ball.vy : 0,
+          r: Number.isFinite(ball.r) ? ball.r : getBaseR(),
+          m: Number.isFinite(ball.m) ? ball.m : getBaseR() * getBaseR() * 0.01,
+          col: ball.col || COLORS[hueIdx % COLORS.length],
+          trail: []
+        }));
+    }
+
+    return true;
+  } catch(error){
+    console.error('Spielstand konnte nicht geladen werden.', error);
+    localStorage.removeItem(SAVE_KEY);
+    return false;
+  }
+}
+
+function resetGame(){
+  localStorage.removeItem(SAVE_KEY);
+  state.coins = 0;
+  state.colPerSec = 0;
+  state.colCount = 0;
+  state.comboCount = 0;
+  state.lastComboT = 0;
+
+  for(const key of Object.keys(upgrades)){
+    upgrades[key] = 0;
+  }
+
+  preferences.theme = 'dark';
+  preferences.colorMode = 'color';
+  preferences.graphVisible = true;
+  objects = [];
+  objectIndex = 0;
+  hueIdx = 0;
+  keMax = 0;
+  keSum = 0;
+  keSamples = 0;
+  keHistory.fill(0);
+
+  for(let i = 0; i < 3; i++){
+    spawnRandom();
+  }
+
+  applyPreferences();
+  updateUI();
+  updateHintMsg();
+  saveGame();
+}
 
 function mkBall(x, y, vx = 0, vy = 0){
   const r = getBaseR() * (0.85 + Math.random() * 0.3);
@@ -567,10 +878,6 @@ function spawnRandom(){
   return true;
 }
 
-for(let i = 0; i < 3; i++){
-  spawnRandom();
-}
-
 /* Kinetische-Energie-Diagramm */
 
 const KE_LENGTH = 120;
@@ -582,6 +889,12 @@ let keSamples = 0;
 
 const graphCanvas = document.getElementById('ke-graph');
 const graphCtx = graphCanvas.getContext('2d');
+
+if(!loadGame() || objects.length === 0){
+  for(let i = 0; i < 3; i++){
+    spawnRandom();
+  }
+}
 
 function drawKEGraph(ke){
   keHistory.push(ke);
@@ -606,7 +919,7 @@ function drawKEGraph(ke){
 
   graphCtx.clearRect(0, 0, GW, GH);
 
-  graphCtx.fillStyle = 'rgba(0,0,0,0.3)';
+  graphCtx.fillStyle = cssVar('--graph-bg');
   graphCtx.fillRect(0, 0, GW, GH);
 
   graphCtx.strokeStyle = 'rgba(255,255,255,0.05)';
@@ -642,7 +955,7 @@ function drawKEGraph(ke){
 
   const gradient = graphCtx.createLinearGradient(0, 0, 0, GH);
 
-  gradient.addColorStop(0, 'rgba(159,225,203,0.35)');
+  gradient.addColorStop(0, preferences.colorMode === 'mono' ? 'rgba(255,255,255,0.28)' : 'rgba(159,225,203,0.35)');
   gradient.addColorStop(1, 'rgba(159,225,203,0.02)');
 
   graphCtx.fillStyle = gradient;
@@ -661,7 +974,7 @@ function drawKEGraph(ke){
     }
   });
 
-  graphCtx.strokeStyle = '#9FE1CB';
+  graphCtx.strokeStyle = preferences.colorMode === 'mono' ? '#ffffff' : '#9FE1CB';
   graphCtx.lineWidth = 1.5;
   graphCtx.stroke();
 
@@ -695,10 +1008,10 @@ canvas.addEventListener('mousedown', event => {
     return;
   }
 
-  const rect = canvas.getBoundingClientRect();
+  const point = getCanvasPoint(event);
 
-  drag.startX = event.clientX - rect.left;
-  drag.startY = event.clientY - rect.top;
+  drag.startX = point.x;
+  drag.startY = point.y;
   drag.x = drag.startX;
   drag.y = drag.startY;
   drag.active = true;
@@ -709,10 +1022,10 @@ canvas.addEventListener('mousemove', event => {
     return;
   }
 
-  const rect = canvas.getBoundingClientRect();
+  const point = getCanvasPoint(event);
 
-  drag.x = event.clientX - rect.left;
-  drag.y = event.clientY - rect.top;
+  drag.x = point.x;
+  drag.y = point.y;
 });
 
 canvas.addEventListener('mouseup', event => {
@@ -726,10 +1039,10 @@ canvas.addEventListener('mouseup', event => {
     return;
   }
 
-  const rect = canvas.getBoundingClientRect();
+  const point = getCanvasPoint(event);
 
-  drag.x = event.clientX - rect.left;
-  drag.y = event.clientY - rect.top;
+  drag.x = point.x;
+  drag.y = point.y;
 
   const dx = drag.startX - drag.x;
   const dy = drag.startY - drag.y;
@@ -766,6 +1079,7 @@ canvas.addEventListener('mouseup', event => {
   }
 
   updateHintMsg();
+  queueSave();
 });
 
 canvas.addEventListener('mouseleave', () => {
@@ -913,8 +1227,10 @@ function spawnFloat(x, y, value){
 
   element.className = 'float-text';
   element.textContent = '+' + value;
-  element.style.left = x + 'px';
-  element.style.top = y + 'px';
+  const rect = canvas.getBoundingClientRect();
+
+  element.style.left = x * (rect.width / canvas.width) + 'px';
+  element.style.top = y * (rect.height / canvas.height) + 'px';
 
   document
     .getElementById('float-coins')
@@ -928,7 +1244,7 @@ function spawnFloat(x, y, value){
 /* Zeichnen */
 
 function drawGrid(){
-  ctx.strokeStyle = 'rgba(255,255,255,0.018)';
+  ctx.strokeStyle = cssVar('--grid');
   ctx.lineWidth = 1;
 
   for(let x = 0; x < W; x += 60){
@@ -958,7 +1274,9 @@ function drawBall(ball){
       );
     }
 
-    ctx.strokeStyle = ball.col + '40';
+    const color = displayColor(ball.col);
+
+    ctx.strokeStyle = color + '40';
     ctx.lineWidth = ball.r * 0.6;
     ctx.lineCap = 'round';
     ctx.stroke();
@@ -974,10 +1292,12 @@ function drawBall(ball){
     Math.PI * 2
   );
 
-  ctx.fillStyle = ball.col + 'dd';
+  const color = displayColor(ball.col);
+
+  ctx.fillStyle = color + 'dd';
   ctx.fill();
 
-  ctx.strokeStyle = ball.col;
+  ctx.strokeStyle = color;
   ctx.lineWidth = 1.2;
   ctx.stroke();
 
@@ -1008,7 +1328,7 @@ function loop(now){
 
   lastTime = now;
 
-  ctx.fillStyle = '#080812';
+  ctx.fillStyle = cssVar('--bg');
   ctx.fillRect(0, 0, W, H);
 
   drawGrid();
@@ -1103,8 +1423,9 @@ function loop(now){
         endY
       );
 
-      const color =
-        `rgba(` +
+      const color = preferences.colorMode === 'mono'
+        ? `rgba(255,255,255,${0.5 + power * 0.4})`
+        : `rgba(` +
         `${Math.round(100 + 155 * power)},` +
         `${Math.round(200 - 100 * power)},` +
         `255,` +
@@ -1173,6 +1494,7 @@ function updateUI(){
     Math.floor(state.coins).toLocaleString('de-DE');
 
   updateButtons();
+  queueSave();
 }
 
 function getBallCost(){
@@ -1387,6 +1709,38 @@ document
     });
   });
 
+document
+  .getElementById('btn-theme')
+  .addEventListener('click', () => {
+    preferences.theme = preferences.theme === 'dark' ? 'light' : 'dark';
+    applyPreferences();
+    saveGame();
+  });
+
+document
+  .getElementById('btn-color-mode')
+  .addEventListener('click', () => {
+    preferences.colorMode = preferences.colorMode === 'color' ? 'mono' : 'color';
+    applyPreferences();
+    saveGame();
+  });
+
+document
+  .getElementById('btn-graph')
+  .addEventListener('click', () => {
+    preferences.graphVisible = !preferences.graphVisible;
+    applyPreferences();
+    saveGame();
+  });
+
+document
+  .getElementById('btn-reset')
+  .addEventListener('click', () => {
+    if(confirm('Spielstand wirklich zurücksetzen?')){
+      resetGame();
+    }
+  });
+
 function updateHintMsg(){
   const maximum = getMaxBalls();
   const current = objects.length;
@@ -1403,6 +1757,10 @@ function updateHintMsg(){
   }
 }
 
+setInterval(saveGame, 5000);
+window.addEventListener('beforeunload', saveGame);
+
+applyPreferences();
 updateUI();
 updateHintMsg();
 
