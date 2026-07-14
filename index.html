@@ -552,6 +552,12 @@ body.graph-hidden #dashboard{
         <div class="btn-cost" id="cost-combo">320 🪙</div>
       </button>
 
+      <button class="upgrade-btn" id="btn-launch">
+        <div class="btn-name">Launch-Power</div>
+        <div class="btn-desc">Drag-Schüsse starten kräftiger</div>
+        <div class="btn-cost" id="cost-launch">110 🪙</div>
+      </button>
+
       <div class="section-label">Anzeige</div>
 
       <button class="setting-btn" id="btn-theme" type="button">
@@ -749,6 +755,10 @@ const upgradeConfig = {
   combo: {
     baseCost: 320,
     growth: 2.05
+  },
+  launch: {
+    baseCost: 110,
+    growth: 2.15
   }
 };
 
@@ -757,7 +767,8 @@ const upgrades = {
   speed: 0,
   mult: 0,
   cap: 0,
-  combo: 0
+  combo: 0,
+  launch: 0
 };
 
 function getCost(key, level){
@@ -774,7 +785,7 @@ function getCost(key, level){
 }
 
 function getArenaScale(){
-  return 1 + Math.floor(objects.length / 10) * 0.35;
+  return 1 + Math.floor(objects.length / 10) * 0.5;
 }
 
 function getBaseR(){
@@ -796,7 +807,7 @@ function getCoinMult(){
 }
 
 function getMaxBalls(){
-  return 5 + upgrades.cap;
+  return 10 + upgrades.cap;
 }
 
 function getComboLevel(){
@@ -805,6 +816,10 @@ function getComboLevel(){
 
 function getSpeedMultiplier(){
   return Math.pow(1.1, upgrades.speed);
+}
+
+function getLaunchPowerMultiplier(){
+  return 0.55 * Math.pow(1.18, upgrades.launch);
 }
 
 let objectIndex = 0;
@@ -929,10 +944,6 @@ function resetGame(){
   collisionSamples = 0;
   collisionHistory.fill(0);
 
-  for(let i = 0; i < 3; i++){
-    spawnRandom();
-  }
-
   applyPreferences();
   updateUI();
   updateHintMsg();
@@ -1003,11 +1014,7 @@ let collisionSamples = 0;
 const graphCanvas = document.getElementById('collision-graph');
 const graphCtx = graphCanvas.getContext('2d');
 
-if(!loadGame() || objects.length === 0){
-  for(let i = 0; i < 3; i++){
-    spawnRandom();
-  }
-}
+loadGame();
 
 function drawCollisionGraph(collisionsPerSecond){
   collisionHistory.push(collisionsPerSecond);
@@ -1178,7 +1185,7 @@ function finishShot(event){
 
   if(distance < 4){
     const angle = Math.random() * Math.PI * 2;
-    const speed = (2 + Math.random() * 3) * getSpeedMultiplier();
+    const speed = (2 + Math.random() * 3) * getLaunchPowerMultiplier() * getSpeedMultiplier();
 
     objects.push(
       mkBall(
@@ -1193,6 +1200,7 @@ function finishShot(event){
     const speed =
       clamped / MAX_DRAG *
       14 *
+      getLaunchPowerMultiplier() *
       getSpeedMultiplier();
 
     objects.push(
@@ -1797,6 +1805,12 @@ function updateButtons(){
     'btn-combo',
     'cost-combo'
   );
+
+  updateUpgradeButton(
+    'launch',
+    'btn-launch',
+    'cost-launch'
+  );
 }
 
 function buy(cost, action){
@@ -1885,6 +1899,17 @@ document
 
     buy(cost, () => {
       upgrades.combo++;
+    });
+  });
+
+document
+  .getElementById('btn-launch')
+  .addEventListener('click', () => {
+    const level = upgrades.launch;
+    const cost = getCost('launch', level);
+
+    buy(cost, () => {
+      upgrades.launch++;
     });
   });
 
