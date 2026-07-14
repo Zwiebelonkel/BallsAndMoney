@@ -168,7 +168,8 @@ canvas{
 }
 
 app-prestige-panel,
-app-settings-panel{
+app-settings-panel,
+app-admin-panel{
   display:contents;
 }
 
@@ -547,6 +548,51 @@ body.graph-hidden #dashboard{
   color:var(--accent);
   font-family:ui-monospace,monospace;
   font-weight:500;
+}
+
+.admin-code-box{
+  display:grid;
+  gap:7px;
+}
+
+.admin-label,
+.admin-message{
+  color:var(--muted-strong);
+  font-size:10px;
+}
+
+.admin-input{
+  width:100%;
+  padding:8px 9px;
+  border:0.5px solid var(--border);
+  border-radius:8px;
+  background:var(--surface-soft);
+  color:var(--text);
+  font:12px ui-monospace,monospace;
+  -webkit-user-select:text;
+  user-select:text;
+}
+
+.admin-input:focus{
+  outline:1px solid rgba(250,199,117,0.45);
+}
+
+.admin-message{
+  min-height:14px;
+}
+
+.admin-message.is-error{
+  color:#D85A30;
+}
+
+.admin-code-box[hidden],
+.admin-actions[hidden]{
+  display:none;
+}
+
+.admin-actions{
+  display:grid;
+  gap:8px;
 }
 
 .upgrade-btn.danger{

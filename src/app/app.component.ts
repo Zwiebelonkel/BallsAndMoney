@@ -1284,6 +1284,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       saveGame();
     }
 
+    function grantAdminMoney(){
+      state.coins += 1000000;
+      state.moneyCount += 1000000;
+      updateUI();
+      saveGame();
+    }
+
     function buy(cost, action){
       if(
         !Number.isFinite(cost) ||
@@ -1379,13 +1386,59 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     const closePrestigePanel = bindSlidePanel('btn-prestige', 'prestige-panel', 'btn-prestige-close');
-    bindSlidePanel('btn-settings-toggle', 'settings-panel', 'btn-settings-close');
+    const closeSettingsPanel = bindSlidePanel('btn-settings-toggle', 'settings-panel', 'btn-settings-close');
+    bindSlidePanel('btn-admin-toggle', 'admin-panel', 'btn-admin-close');
 
     document
       .getElementById('btn-prestige-confirm')
       .addEventListener('click', () => {
         performPrestige();
         closePrestigePanel();
+      });
+
+    const adminCode = '1906';
+    const adminCodeInput = getElementById<HTMLInputElement>('admin-code-input');
+    const adminCodeMessage = getElementById<HTMLElement>('admin-code-message');
+    const adminCodeBox = getElementById<HTMLElement>('admin-code-box');
+    const adminActions = getElementById<HTMLElement>('admin-actions');
+    let adminUnlocked = false;
+
+    function setAdminUnlocked(isUnlocked){
+      adminUnlocked = isUnlocked;
+      adminCodeBox.hidden = isUnlocked;
+      adminActions.hidden = !isUnlocked;
+      adminCodeMessage.textContent = isUnlocked ? 'Admin Panel freigeschaltet.' : 'Code erforderlich.';
+      adminCodeMessage.classList.toggle('is-error', false);
+    }
+
+    document
+      .getElementById('btn-admin-unlock')
+      .addEventListener('click', () => {
+        if(adminCodeInput.value === adminCode){
+          setAdminUnlocked(true);
+          adminCodeInput.value = '';
+          return;
+        }
+
+        adminCodeMessage.textContent = 'Falscher Code.';
+        adminCodeMessage.classList.add('is-error');
+      });
+
+    adminCodeInput.addEventListener('keydown', event => {
+      if(event.key === 'Enter'){
+        document.getElementById('btn-admin-unlock').click();
+      }
+    });
+
+    document
+      .getElementById('btn-admin-money')
+      .addEventListener('click', () => {
+        if(!adminUnlocked){
+          return;
+        }
+
+        grantAdminMoney();
+        closeSettingsPanel();
       });
 
     document

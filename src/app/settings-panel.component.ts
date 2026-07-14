@@ -1,8 +1,10 @@
 import { Component } from '@angular/core';
+import { AdminPanelComponent } from './admin-panel.component';
 
 @Component({
   selector: 'app-settings-panel',
   standalone: true,
+  imports: [AdminPanelComponent],
   template: `
     <div class="section-label">Anzeige</div>
 
@@ -35,6 +37,8 @@ import { Component } from '@angular/core';
           Graph umschalten
           <span class="setting-value" id="graph-val">Sichtbar</span>
         </button>
+
+        <app-admin-panel></app-admin-panel>
 
         <button class="setting-btn danger" id="btn-reset" type="button">
           Spielstand zurücksetzen
