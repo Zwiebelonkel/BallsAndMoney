@@ -732,11 +732,11 @@ const state = {
 const upgradeConfig = {
   size: {
     baseCost: 90,
-    growth: 1.72
+    growth: 2.25
   },
   speed: {
     baseCost: 140,
-    growth: 1.82
+    growth: 2.35
   },
   mult: {
     baseCost: 180,
@@ -774,7 +774,7 @@ function getCost(key, level){
 }
 
 function getArenaScale(){
-  return 1 + Math.floor(objects.length / 10) * 0.18;
+  return 1 + Math.floor(objects.length / 10) * 0.35;
 }
 
 function getBaseR(){
