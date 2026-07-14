@@ -47,6 +47,21 @@ body.theme-light{
   --graph-bg:rgba(255,255,255,0.35);
 }
 
+
+body.mono-mode{
+  --accent:#ffffff;
+  --good:#ffffff;
+  --grid:rgba(255,255,255,0.045);
+  --graph-bg:rgba(0,0,0,0.3);
+}
+
+body.theme-light.mono-mode{
+  --accent:#000000;
+  --good:#000000;
+  --grid:rgba(0,0,0,0.075);
+  --graph-bg:rgba(255,255,255,0.35);
+}
+
 body{
   background:var(--bg);
   color:var(--text);
@@ -562,16 +577,43 @@ const wrap = document.getElementById('canvas-wrap');
 
 let W = 0;
 let H = 0;
+let objects = [];
 
-const MIN_ARENA_W = 900;
-const MIN_ARENA_H = 560;
+const MAX_DEVICE_PIXEL_RATIO = 2;
 
 function resize(){
-  W = Math.max(W, wrap.clientWidth, MIN_ARENA_W);
-  H = Math.max(H, wrap.clientHeight, MIN_ARENA_H);
+  const previousW = W || wrap.clientWidth || 1;
+  const previousH = H || wrap.clientHeight || 1;
 
-  canvas.width = W;
-  canvas.height = H;
+  W = Math.max(1, wrap.clientWidth);
+  H = Math.max(1, wrap.clientHeight);
+
+  const devicePixelRatio = Math.min(
+    window.devicePixelRatio || 1,
+    MAX_DEVICE_PIXEL_RATIO
+  );
+
+  canvas.width = Math.round(W * devicePixelRatio);
+  canvas.height = Math.round(H * devicePixelRatio);
+  ctx.setTransform(
+    devicePixelRatio,
+    0,
+    0,
+    devicePixelRatio,
+    0,
+    0
+  );
+
+  if(objects.length > 0){
+    const scaleX = W / previousW;
+    const scaleY = H / previousH;
+
+    for(const ball of objects){
+      ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x * scaleX));
+      ball.y = Math.max(ball.r, Math.min(H - ball.r, ball.y * scaleY));
+      ball.trail = [];
+    }
+  }
 }
 
 resize();
@@ -605,8 +647,8 @@ function getCanvasPoint(event){
   const rect = canvas.getBoundingClientRect();
 
   return {
-    x: (event.clientX - rect.left) * (canvas.width / rect.width),
-    y: (event.clientY - rect.top) * (canvas.height / rect.height)
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
   };
 }
 
@@ -614,13 +656,24 @@ function cssVar(name){
   return getComputedStyle(document.body).getPropertyValue(name).trim();
 }
 
+function getMonoInkColor(){
+  return preferences.theme === 'light' ? '#000000' : '#ffffff';
+}
+
+function getMonoSoftColor(alpha){
+  const channel = preferences.theme === 'light' ? '0,0,0' : '255,255,255';
+
+  return `rgba(${channel},${alpha})`;
+}
+
 function displayColor(color){
-  return preferences.colorMode === 'mono' ? '#f2f2f2' : color;
+  return preferences.colorMode === 'mono' ? getMonoInkColor() : color;
 }
 
 function applyPreferences(){
   document.body.classList.toggle('theme-light', preferences.theme === 'light');
   document.body.classList.toggle('graph-hidden', !preferences.graphVisible);
+  document.body.classList.toggle('mono-mode', preferences.colorMode === 'mono');
   document.getElementById('theme-val').textContent = preferences.theme === 'light' ? 'Light' : 'Dark';
   document.getElementById('color-mode-val').textContent = preferences.colorMode === 'mono' ? 'Schwarz-Weiß' : 'Farben aktiv';
   document.getElementById('graph-val').textContent = preferences.graphVisible ? 'Sichtbar' : 'Ausgeblendet';
@@ -699,7 +752,6 @@ function getSpeedMultiplier(){
   return Math.pow(1.18, upgrades.speed);
 }
 
-let objects = [];
 let objectIndex = 0;
 let saveTimer = 0;
 
@@ -767,8 +819,6 @@ function loadGame(){
     }
 
     if(data.arena){
-      W = Math.max(W, data.arena.w || 0);
-      H = Math.max(H, data.arena.h || 0);
       resize();
     }
 
@@ -955,8 +1005,8 @@ function drawKEGraph(ke){
 
   const gradient = graphCtx.createLinearGradient(0, 0, 0, GH);
 
-  gradient.addColorStop(0, preferences.colorMode === 'mono' ? 'rgba(255,255,255,0.28)' : 'rgba(159,225,203,0.35)');
-  gradient.addColorStop(1, 'rgba(159,225,203,0.02)');
+  gradient.addColorStop(0, preferences.colorMode === 'mono' ? getMonoSoftColor(0.28) : 'rgba(159,225,203,0.35)');
+  gradient.addColorStop(1, preferences.colorMode === 'mono' ? getMonoSoftColor(0.02) : 'rgba(159,225,203,0.02)');
 
   graphCtx.fillStyle = gradient;
   graphCtx.fill();
@@ -974,7 +1024,7 @@ function drawKEGraph(ke){
     }
   });
 
-  graphCtx.strokeStyle = preferences.colorMode === 'mono' ? '#ffffff' : '#9FE1CB';
+  graphCtx.strokeStyle = preferences.colorMode === 'mono' ? getMonoInkColor() : '#9FE1CB';
   graphCtx.lineWidth = 1.5;
   graphCtx.stroke();
 
@@ -1229,8 +1279,8 @@ function spawnFloat(x, y, value){
   element.textContent = '+' + value;
   const rect = canvas.getBoundingClientRect();
 
-  element.style.left = x * (rect.width / canvas.width) + 'px';
-  element.style.top = y * (rect.height / canvas.height) + 'px';
+  element.style.left = x * (rect.width / W) + 'px';
+  element.style.top = y * (rect.height / H) + 'px';
 
   document
     .getElementById('float-coins')
@@ -1310,7 +1360,9 @@ function drawBall(ball){
     Math.PI * 2
   );
 
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fillStyle = preferences.colorMode === 'mono'
+    ? getMonoSoftColor(preferences.theme === 'light' ? 0.12 : 0.32)
+    : 'rgba(255,255,255,0.22)';
   ctx.fill();
 }
 
@@ -1392,7 +1444,9 @@ function loop(now){
       );
 
       ctx.strokeStyle =
-        `rgba(255,255,255,${0.15 + power * 0.3})`;
+        preferences.colorMode === 'mono'
+          ? getMonoSoftColor(0.15 + power * 0.3)
+          : `rgba(255,255,255,${0.15 + power * 0.3})`;
 
       ctx.lineWidth = 1.5;
       ctx.setLineDash([3, 3]);
@@ -1424,7 +1478,7 @@ function loop(now){
       );
 
       const color = preferences.colorMode === 'mono'
-        ? `rgba(255,255,255,${0.5 + power * 0.4})`
+        ? getMonoSoftColor(0.5 + power * 0.4)
         : `rgba(` +
         `${Math.round(100 + 155 * power)},` +
         `${Math.round(200 - 100 * power)},` +
@@ -1455,7 +1509,9 @@ function loop(now){
       ctx.fillStyle = color;
       ctx.fill();
 
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillStyle = preferences.colorMode === 'mono'
+        ? getMonoSoftColor(0.55)
+        : 'rgba(255,255,255,0.55)';
       ctx.font = '10px ui-monospace,monospace';
 
       ctx.fillText(
