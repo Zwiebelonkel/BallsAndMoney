@@ -1,8 +1,11 @@
 import { AfterViewInit, Component, OnDestroy } from '@angular/core';
+import { PrestigePanelComponent } from './prestige-panel.component';
+import { SettingsPanelComponent } from './settings-panel.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
+  imports: [PrestigePanelComponent, SettingsPanelComponent],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
@@ -416,37 +419,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         col,
         trail: []
       };
-    }
-
-    function spawnRandom(){
-      if(objects.length >= getMaxBalls()){
-        return false;
-      }
-
-      const r = getBaseR();
-
-      const x = r + Math.random() * Math.max(1, W - r * 2);
-      const y = r + Math.random() * Math.max(1, H / 2 - r);
-
-      const angle = Math.random() * Math.PI * 2;
-      const speed = (2 + Math.random() * 3) * getLaunchPowerMultiplier();
-
-      const previousArenaScale = getArenaScale();
-
-      objects.push(
-        mkBall(
-          x,
-          y,
-          Math.cos(angle) * speed,
-          Math.sin(angle) * speed
-        )
-      );
-
-      if(getArenaScale() !== previousArenaScale){
-        resizeBallsToCurrentArena();
-      }
-
-      return true;
     }
 
     /* Diagramme */
@@ -1181,43 +1153,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       queueSave();
     }
 
-    function getBallCost(){
-      return Math.floor(
-        35 *
-        Math.pow(
-          1.72,
-          Math.max(0, objects.length - 3)
-        )
-      );
-    }
-
     function updateButtons(){
       const coins = state.coins;
-
-      const ballCost = getBallCost();
-      const reachedMaximum =
-        objects.length >= getMaxBalls();
-
-      const spawnButton =
-        getElementById<HTMLButtonElement>('btn-spawn');
-
-      spawnButton.disabled =
-        coins < ballCost ||
-        reachedMaximum;
-
-      spawnButton.className =
-        'upgrade-btn' +
-        (
-          coins >= ballCost &&
-          !reachedMaximum
-            ? ' can-afford'
-            : ''
-        );
-
-      document.getElementById('cost-spawn').textContent =
-        reachedMaximum
-          ? `Max (${getMaxBalls()})`
-          : ballCost + ' 🪙';
 
       function updateUpgradeButton(key, buttonId, costId){
         const level = upgrades[key];
@@ -1287,12 +1224,21 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const prestigeCostElement = document.getElementById('cost-prestige');
       const prestigeCost = getPrestigeCost();
 
-      prestigeButton.disabled = coins < prestigeCost;
+      prestigeButton.disabled = false;
       prestigeButton.className =
         'upgrade-btn' + (coins >= prestigeCost ? ' can-afford' : '');
-      prestigeCostElement.textContent =
+      const prestigeCostText =
         prestigeCost.toLocaleString('de-DE') +
         ` 🪙 → Global x${getNextGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 })}`;
+
+      prestigeCostElement.textContent = prestigeCostText;
+      document.getElementById('prestige-current-mult').textContent =
+        `Global x${getGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 })}`;
+      document.getElementById('prestige-next-mult').textContent =
+        `Global x${getNextGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 })}`;
+      document.getElementById('prestige-panel-cost').textContent =
+        prestigeCost.toLocaleString('de-DE') + ' 🪙';
+      getElementById<HTMLButtonElement>('btn-prestige-confirm').disabled = coins < prestigeCost;
     }
 
     function getPrestigeCost(){
@@ -1355,17 +1301,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     /* Shop-Buttons */
 
     document
-      .getElementById('btn-spawn')
-      .addEventListener('click', () => {
-        const cost = getBallCost();
-
-        buy(cost, () => {
-          spawnRandom();
-          updateHintMsg();
-        });
-      });
-
-    document
       .getElementById('btn-size')
       .addEventListener('click', () => {
         const level = upgrades.size;
@@ -1421,12 +1356,36 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         });
       });
 
-    document
-      .getElementById('btn-prestige')
-      .addEventListener('click', () => {
-        if(confirm('Prestige durchführen? Dein aktueller Run wird zurückgesetzt, aber der globale Geld-Multiplikator steigt permanent.')){
-          performPrestige();
+    function bindSlidePanel(toggleId, panelId, closeId){
+      const toggle = getElementById<HTMLButtonElement>(toggleId);
+      const panel = getElementById<HTMLElement>(panelId);
+      const close = getElementById<HTMLButtonElement>(closeId);
+
+      function setOpen(isOpen){
+        panel.classList.toggle('is-open', isOpen);
+        panel.setAttribute('aria-hidden', String(!isOpen));
+        toggle.setAttribute('aria-expanded', String(isOpen));
+      }
+
+      toggle.addEventListener('click', () => setOpen(true));
+      close.addEventListener('click', () => setOpen(false));
+      panel.addEventListener('click', event => {
+        if(event.target === panel){
+          setOpen(false);
         }
+      });
+
+      return () => setOpen(false);
+    }
+
+    const closePrestigePanel = bindSlidePanel('btn-prestige', 'prestige-panel', 'btn-prestige-close');
+    bindSlidePanel('btn-settings-toggle', 'settings-panel', 'btn-settings-close');
+
+    document
+      .getElementById('btn-prestige-confirm')
+      .addEventListener('click', () => {
+        performPrestige();
+        closePrestigePanel();
       });
 
     document

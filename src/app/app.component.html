@@ -80,14 +80,6 @@
 
     <div id="shop-items">
 
-      <div class="section-label">Kugeln</div>
-
-      <button class="upgrade-btn" id="btn-spawn">
-        <div class="btn-name">Neue Kugel</div>
-        <div class="btn-desc">+1 Kugel im Feld</div>
-        <div class="btn-cost" id="cost-spawn">35 🪙</div>
-      </button>
-
       <div class="section-label">Upgrades</div>
 
       <button class="upgrade-btn" id="btn-size">
@@ -120,35 +112,9 @@
         <div class="btn-cost" id="cost-launch">110 🪙</div>
       </button>
 
-      <div class="section-label">Prestige</div>
+      <app-prestige-panel></app-prestige-panel>
 
-      <button class="upgrade-btn" id="btn-prestige">
-        <div class="btn-name">Prestige</div>
-        <div class="btn-desc">Reset für permanenten globalen Geld-Multiplikator</div>
-        <div class="btn-cost" id="cost-prestige">5.000.000 🪙</div>
-      </button>
-
-      <div class="section-label">Anzeige</div>
-
-      <button class="setting-btn" id="btn-theme" type="button">
-        Theme wechseln
-        <span class="setting-value" id="theme-val">Dark</span>
-      </button>
-
-      <button class="setting-btn" id="btn-color-mode" type="button">
-        Farbmodus wechseln
-        <span class="setting-value" id="color-mode-val">Farben aktiv</span>
-      </button>
-
-      <button class="setting-btn" id="btn-graph" type="button">
-        Graph umschalten
-        <span class="setting-value" id="graph-val">Sichtbar</span>
-      </button>
-
-      <button class="setting-btn danger" id="btn-reset" type="button">
-        Spielstand zurücksetzen
-        <span class="setting-value">Reset</span>
-      </button>
+      <app-settings-panel></app-settings-panel>
 
     </div>
   </div>
