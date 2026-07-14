@@ -3,515 +3,1396 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Ball Idle Game</title>
+
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#080812;color:#e4e2f0;font-family:system-ui,sans-serif;overflow:hidden;width:100vw;height:100vh}
-#root{display:flex;width:100%;height:100vh}
-#canvas-wrap{position:relative;flex:1;overflow:hidden}
-canvas{display:block;width:100%;height:100%}
-#ui{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:10px}
-#top-bar{display:flex;gap:10px;align-items:flex-start}
-.pill{background:rgba(10,10,25,0.82);border:0.5px solid rgba(255,255,255,0.12);border-radius:20px;padding:5px 14px;font-size:12px;color:rgba(255,255,255,0.8);font-family:ui-monospace,monospace;white-space:nowrap}
-.pill span{color:#FAC775;font-weight:600}
-#coins-pill{font-size:13px}
-#combo-pill{transition:opacity .3s}
-#shop{width:200px;background:rgba(8,8,18,0.95);border-left:0.5px solid rgba(255,255,255,0.09);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
-#shop-header{padding:10px 12px 6px;border-bottom:0.5px solid rgba(255,255,255,0.07)}
-#shop-header h2{font-size:13px;font-weight:500;color:rgba(255,255,255,0.9);margin-bottom:2px}
-#shop-header p{font-size:10px;color:rgba(255,255,255,0.35)}
-#shop-items{flex:1;overflow-y:auto;padding:8px}
-#shop-items::-webkit-scrollbar{width:3px}
-#shop-items::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px}
-.upgrade-btn{width:100%;margin-bottom:6px;padding:7px 9px;border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(255,255,255,0.03);color:#e4e2f0;cursor:pointer;text-align:left;transition:all .15s;font-family:system-ui,sans-serif}
-.upgrade-btn:hover:not(:disabled){background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.18)}
-.upgrade-btn:disabled{opacity:0.38;cursor:not-allowed}
-.upgrade-btn.can-afford{border-color:rgba(250,199,117,0.35);background:rgba(250,199,117,0.05)}
-.upgrade-btn.can-afford:hover{background:rgba(250,199,117,0.1);border-color:rgba(250,199,117,0.5)}
-.btn-name{font-size:11px;font-weight:500;color:#e4e2f0;line-height:1.3}
-.btn-desc{font-size:10px;color:rgba(255,255,255,0.4);margin:1px 0 3px;line-height:1.3}
-.btn-cost{font-size:10px;color:#FAC775;font-family:ui-monospace,monospace}
-.btn-cost.maxed{color:#1D9E75}
-.section-label{font-size:10px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 4px 2px}
-#float-coins{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
-.float-text{position:absolute;font-size:11px;font-family:ui-monospace,monospace;color:#FAC775;pointer-events:none;animation:floatUp 1.1s ease-out forwards}
-@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(0.85)}}
-#hint-msg{font-size:10px;color:rgba(255,255,255,0.25);text-align:center}
-#dashboard{position:absolute;bottom:10px;left:10px;background:rgba(8,8,20,0.88);border:0.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;pointer-events:none;width:220px}
-#dash-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
-#dash-label{font-size:9px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.1em}
-#dash-ke{font-size:20px;font-weight:500;font-family:ui-monospace,monospace;color:#9FE1CB;line-height:1}
-#dash-ke-unit{font-size:10px;color:rgba(255,255,255,0.28);margin-left:2px}
-#ke-graph{display:block;width:100%;height:54px;border-radius:4px;margin-top:7px}
-#dash-sub{display:flex;justify-content:space-between;margin-top:5px}
-.dash-stat{font-size:9px;color:rgba(255,255,255,0.28);font-family:ui-monospace,monospace}
-.dash-stat span{color:rgba(255,255,255,0.6)}
+*,*::before,*::after{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+body{
+  background:#080812;
+  color:#e4e2f0;
+  font-family:system-ui,sans-serif;
+  overflow:hidden;
+  width:100vw;
+  height:100vh;
+}
+
+#root{
+  display:flex;
+  width:100%;
+  height:100vh;
+}
+
+#canvas-wrap{
+  position:relative;
+  flex:1;
+  overflow:hidden;
+}
+
+canvas{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+#ui{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  pointer-events:none;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:10px;
+}
+
+#top-bar{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+
+.pill{
+  background:rgba(10,10,25,0.82);
+  border:0.5px solid rgba(255,255,255,0.12);
+  border-radius:20px;
+  padding:5px 14px;
+  font-size:12px;
+  color:rgba(255,255,255,0.8);
+  font-family:ui-monospace,monospace;
+  white-space:nowrap;
+}
+
+.pill span{
+  color:#FAC775;
+  font-weight:600;
+}
+
+#coins-pill{
+  font-size:13px;
+}
+
+#combo-pill{
+  transition:opacity .3s;
+}
+
+#shop{
+  width:200px;
+  background:rgba(8,8,18,0.95);
+  border-left:0.5px solid rgba(255,255,255,0.09);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  flex-shrink:0;
+}
+
+#shop-header{
+  padding:10px 12px 6px;
+  border-bottom:0.5px solid rgba(255,255,255,0.07);
+}
+
+#shop-header h2{
+  font-size:13px;
+  font-weight:500;
+  color:rgba(255,255,255,0.9);
+  margin-bottom:2px;
+}
+
+#shop-header p{
+  font-size:10px;
+  color:rgba(255,255,255,0.35);
+}
+
+#shop-items{
+  flex:1;
+  overflow-y:auto;
+  padding:8px;
+}
+
+#shop-items::-webkit-scrollbar{
+  width:3px;
+}
+
+#shop-items::-webkit-scrollbar-thumb{
+  background:rgba(255,255,255,0.12);
+  border-radius:2px;
+}
+
+.upgrade-btn{
+  width:100%;
+  margin-bottom:6px;
+  padding:7px 9px;
+  border:0.5px solid rgba(255,255,255,0.1);
+  border-radius:8px;
+  background:rgba(255,255,255,0.03);
+  color:#e4e2f0;
+  cursor:pointer;
+  text-align:left;
+  transition:all .15s;
+  font-family:system-ui,sans-serif;
+}
+
+.upgrade-btn:hover:not(:disabled){
+  background:rgba(255,255,255,0.07);
+  border-color:rgba(255,255,255,0.18);
+}
+
+.upgrade-btn:disabled{
+  opacity:0.38;
+  cursor:not-allowed;
+}
+
+.upgrade-btn.can-afford{
+  border-color:rgba(250,199,117,0.35);
+  background:rgba(250,199,117,0.05);
+}
+
+.upgrade-btn.can-afford:hover{
+  background:rgba(250,199,117,0.1);
+  border-color:rgba(250,199,117,0.5);
+}
+
+.btn-name{
+  font-size:11px;
+  font-weight:500;
+  color:#e4e2f0;
+  line-height:1.3;
+}
+
+.btn-desc{
+  font-size:10px;
+  color:rgba(255,255,255,0.4);
+  margin:1px 0 3px;
+  line-height:1.3;
+}
+
+.btn-cost{
+  font-size:10px;
+  color:#FAC775;
+  font-family:ui-monospace,monospace;
+}
+
+.btn-cost.maxed{
+  color:#1D9E75;
+}
+
+.section-label{
+  font-size:10px;
+  color:rgba(255,255,255,0.25);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin:10px 0 4px 2px;
+}
+
+#float-coins{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  overflow:hidden;
+}
+
+.float-text{
+  position:absolute;
+  font-size:11px;
+  font-family:ui-monospace,monospace;
+  color:#FAC775;
+  pointer-events:none;
+  animation:floatUp 1.1s ease-out forwards;
+}
+
+@keyframes floatUp{
+  0%{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+
+  100%{
+    opacity:0;
+    transform:translateY(-40px) scale(0.85);
+  }
+}
+
+#hint-msg{
+  font-size:10px;
+  color:rgba(255,255,255,0.25);
+  text-align:center;
+}
+
+#dashboard{
+  position:absolute;
+  bottom:10px;
+  left:10px;
+  background:rgba(8,8,20,0.88);
+  border:0.5px solid rgba(255,255,255,0.1);
+  border-radius:10px;
+  padding:10px 12px;
+  pointer-events:none;
+  width:220px;
+}
+
+#dash-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:2px;
+}
+
+#dash-label{
+  font-size:9px;
+  color:rgba(255,255,255,0.3);
+  text-transform:uppercase;
+  letter-spacing:.1em;
+}
+
+#dash-ke{
+  font-size:20px;
+  font-weight:500;
+  font-family:ui-monospace,monospace;
+  color:#9FE1CB;
+  line-height:1;
+}
+
+#dash-ke-unit{
+  font-size:10px;
+  color:rgba(255,255,255,0.28);
+  margin-left:2px;
+}
+
+#ke-graph{
+  display:block;
+  width:100%;
+  height:54px;
+  border-radius:4px;
+  margin-top:7px;
+}
+
+#dash-sub{
+  display:flex;
+  justify-content:space-between;
+  margin-top:5px;
+}
+
+.dash-stat{
+  font-size:9px;
+  color:rgba(255,255,255,0.28);
+  font-family:ui-monospace,monospace;
+}
+
+.dash-stat span{
+  color:rgba(255,255,255,0.6);
+}
 </style>
 </head>
+
 <body>
+
 <div id="root">
-<div id="canvas-wrap">
-  <canvas id="c"></canvas>
-  <div id="ui">
-    <div id="top-bar">
-      <div class="pill" id="coins-pill">💰 <span id="coins-val">0</span></div>
-      <div class="pill" id="col-pill">💥 <span id="col-val">0</span>/s</div>
-      <div class="pill" id="combo-pill" style="opacity:0">🔥 x<span id="combo-val">1</span></div>
-    </div>
-    <div id="hint-msg">Drag → Kugel schießen · Kurzer Klick = zufällig</div>
-  </div>
-  <div id="float-coins"></div>
-  <div id="dashboard">
-    <div id="dash-header">
-      <span id="dash-label">Kinetische Energie</span>
-    </div>
-    <div><span id="dash-ke">0</span><span id="dash-ke-unit">J</span></div>
-    <canvas id="ke-graph" width="196" height="54"></canvas>
-    <div id="dash-sub">
-      <div class="dash-stat">max <span id="dash-kemax">0</span></div>
-      <div class="dash-stat">Ø <span id="dash-keavg">0</span></div>
-      <div class="dash-stat">Kugeln <span id="dash-n">0</span></div>
-    </div>
-  </div>
-</div>
 
-<div id="shop">
-  <div id="shop-header">
-    <h2>Shop</h2>
-    <p>Kollisionen = Münzen</p>
-  </div>
-  <div id="shop-items">
-    <div class="section-label">Kugeln</div>
-    <button class="upgrade-btn" id="btn-spawn">
-      <div class="btn-name">Neue Kugel</div>
-      <div class="btn-desc">+1 Kugel im Feld</div>
-      <div class="btn-cost" id="cost-spawn">25 🪙</div>
-    </button>
+  <div id="canvas-wrap">
 
-    <div class="section-label">Upgrades</div>
-    <button class="upgrade-btn" id="btn-size">
-      <div class="btn-name">Größe +</div>
-      <div class="btn-desc">Alle Kugeln wachsen</div>
-      <div class="btn-cost" id="cost-size">60 🪙</div>
-    </button>
-    <button class="upgrade-btn" id="btn-speed">
-      <div class="btn-name">Tempo +</div>
-      <div class="btn-desc">Kugeln schneller</div>
-      <div class="btn-cost" id="cost-speed">80 🪙</div>
-    </button>
-    <button class="upgrade-btn" id="btn-mult">
-      <div class="btn-name">Multiplikator</div>
-      <div class="btn-desc">Mehr Münzen/Kollision</div>
-      <div class="btn-cost" id="cost-mult">120 🪙</div>
-    </button>
-    <button class="upgrade-btn" id="btn-elastic">
-      <div class="btn-name">Turbo +</div>
-      <div class="btn-desc">Alle Kugeln +20% Speed</div>
-      <div class="btn-cost" id="cost-elastic">100 🪙</div>
-    </button>
-    <button class="upgrade-btn" id="btn-cap">
-      <div class="btn-name">Kapazität +</div>
-      <div class="btn-desc">Max. Kugeln +5</div>
-      <div class="btn-cost" id="cost-cap">200 🪙</div>
-    </button>
-    <button class="upgrade-btn" id="btn-combo">
-      <div class="btn-name">Combo-Bonus</div>
-      <div class="btn-desc">Schnelle Koll. = Bonus</div>
-      <div class="btn-cost" id="cost-combo">180 🪙</div>
-    </button>
+    <canvas id="c"></canvas>
+
+    <div id="ui">
+      <div id="top-bar">
+        <div class="pill" id="coins-pill">
+          💰 <span id="coins-val">0</span>
+        </div>
+
+        <div class="pill" id="col-pill">
+          💥 <span id="col-val">0</span>/s
+        </div>
+
+        <div class="pill" id="combo-pill" style="opacity:0">
+          🔥 x<span id="combo-val">1</span>
+        </div>
+      </div>
+
+      <div id="hint-msg">
+        Drag → Kugel schießen · Kurzer Klick = zufällig
+      </div>
+    </div>
+
+    <div id="float-coins"></div>
+
+    <div id="dashboard">
+
+      <div id="dash-header">
+        <span id="dash-label">Kinetische Energie</span>
+      </div>
+
+      <div>
+        <span id="dash-ke">0</span>
+        <span id="dash-ke-unit">J</span>
+      </div>
+
+      <canvas id="ke-graph" width="196" height="54"></canvas>
+
+      <div id="dash-sub">
+        <div class="dash-stat">
+          max <span id="dash-kemax">0</span>
+        </div>
+
+        <div class="dash-stat">
+          Ø <span id="dash-keavg">0</span>
+        </div>
+
+        <div class="dash-stat">
+          Kugeln <span id="dash-n">0</span>
+        </div>
+      </div>
+
+    </div>
   </div>
-</div>
+
+  <div id="shop">
+
+    <div id="shop-header">
+      <h2>Shop</h2>
+      <p>Kollisionen = Münzen</p>
+    </div>
+
+    <div id="shop-items">
+
+      <div class="section-label">Kugeln</div>
+
+      <button class="upgrade-btn" id="btn-spawn">
+        <div class="btn-name">Neue Kugel</div>
+        <div class="btn-desc">+1 Kugel im Feld</div>
+        <div class="btn-cost" id="cost-spawn">25 🪙</div>
+      </button>
+
+      <div class="section-label">Upgrades</div>
+
+      <button class="upgrade-btn" id="btn-size">
+        <div class="btn-name">Größe +</div>
+        <div class="btn-desc">Alle Kugeln wachsen</div>
+        <div class="btn-cost" id="cost-size">60 🪙</div>
+      </button>
+
+      <button class="upgrade-btn" id="btn-speed">
+        <div class="btn-name">Tempo +</div>
+        <div class="btn-desc">Erhöht die Geschwindigkeit</div>
+        <div class="btn-cost" id="cost-speed">80 🪙</div>
+      </button>
+
+      <button class="upgrade-btn" id="btn-mult">
+        <div class="btn-name">Multiplikator</div>
+        <div class="btn-desc">Mehr Münzen pro Kollision</div>
+        <div class="btn-cost" id="cost-mult">120 🪙</div>
+      </button>
+
+      <button class="upgrade-btn" id="btn-cap">
+        <div class="btn-name">Kapazität +</div>
+        <div class="btn-desc">Maximale Kugeln +5</div>
+        <div class="btn-cost" id="cost-cap">200 🪙</div>
+      </button>
+
+      <button class="upgrade-btn" id="btn-combo">
+        <div class="btn-name">Combo-Bonus</div>
+        <div class="btn-desc">Schnelle Kollisionen geben Bonus</div>
+        <div class="btn-cost" id="cost-combo">180 🪙</div>
+      </button>
+
+    </div>
+  </div>
+
 </div>
 
 <script>
 (function(){
-const canvas=document.getElementById('c');
-const ctx=canvas.getContext('2d');
-const wrap=document.getElementById('canvas-wrap');
-let W=0,H=0;
-function resize(){W=wrap.clientWidth;H=wrap.clientHeight;canvas.width=W;canvas.height=H;}
-resize();
-new ResizeObserver(resize).observe(wrap);
 
-const COLORS=['#4a8fd4','#1D9E75','#D85A30','#D4537E','#FAC775','#9FE1CB','#b388ff','#5DCAA5','#f48fb1','#80cbc4'];
-let hueIdx=0;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvas-wrap');
 
-const state={
-  coins:0, colPerSec:0, lastColT:performance.now(), colCount:0,
-  comboCount:0, lastComboT:0
-};
+let W = 0;
+let H = 0;
 
-const baseCosts={size:60,speed:80,mult:120,turbo:100,cap:200,combo:180,launch:70};
-const upgrades={size:0,speed:0,mult:0,turbo:0,cap:0,combo:0,launch:0};
+function resize(){
+  W = wrap.clientWidth;
+  H = wrap.clientHeight;
 
-function getCost(key,lvl){
-  if(key==='turbo'&&lvl>=1) return Infinity;
-  return Math.round(baseCosts[key]*Math.pow(1.55,lvl));
+  canvas.width = W;
+  canvas.height = H;
 }
 
-function getBaseR(){return 14+upgrades.size*4;}
-function getLaunchSpeed(){return 1+upgrades.launch*0.3;}
-function getCoinMult(){return 1+upgrades.mult*0.8;}
-function getMaxBalls(){return 5+upgrades.cap*5;}
-function getComboLevel(){return upgrades.combo;}
+resize();
 
-let objects=[];
-let oidx=0;
+new ResizeObserver(resize).observe(wrap);
 
-function mkBall(x,y,vx,vy){
-  const r=getBaseR()*(0.85+Math.random()*0.3);
-  const col=COLORS[hueIdx%COLORS.length]; hueIdx++;
-  const m=r*r*0.01;
-  return{id:oidx++,x,y,vx:vx||0,vy:vy||0,r,m,col,trail:[]};
+const COLORS = [
+  '#4a8fd4',
+  '#1D9E75',
+  '#D85A30',
+  '#D4537E',
+  '#FAC775',
+  '#9FE1CB',
+  '#b388ff',
+  '#5DCAA5',
+  '#f48fb1',
+  '#80cbc4'
+];
+
+let hueIdx = 0;
+
+const state = {
+  coins: 0,
+  colPerSec: 0,
+  lastColT: performance.now(),
+  colCount: 0,
+  comboCount: 0,
+  lastComboT: 0
+};
+
+const baseCosts = {
+  size: 60,
+  speed: 80,
+  mult: 120,
+  cap: 200,
+  combo: 180
+};
+
+const upgrades = {
+  size: 0,
+  speed: 0,
+  mult: 0,
+  cap: 0,
+  combo: 0
+};
+
+function getCost(key, level){
+  const baseCost = baseCosts[key];
+
+  if(baseCost === undefined){
+    console.error(`Kein Preis für Upgrade "${key}" definiert.`);
+    return Infinity;
+  }
+
+  return Math.round(
+    baseCost * Math.pow(1.55, level)
+  );
+}
+
+function getBaseR(){
+  return 14 + upgrades.size * 4;
+}
+
+function getCoinMult(){
+  return 1 + upgrades.mult * 0.8;
+}
+
+function getMaxBalls(){
+  return 5 + upgrades.cap * 5;
+}
+
+function getComboLevel(){
+  return upgrades.combo;
+}
+
+function getSpeedMultiplier(){
+  return Math.pow(1.25, upgrades.speed);
+}
+
+let objects = [];
+let objectIndex = 0;
+
+function mkBall(x, y, vx = 0, vy = 0){
+  const r = getBaseR() * (0.85 + Math.random() * 0.3);
+  const col = COLORS[hueIdx % COLORS.length];
+
+  hueIdx++;
+
+  const mass = r * r * 0.01;
+
+  return {
+    id: objectIndex++,
+    x,
+    y,
+    vx,
+    vy,
+    r,
+    m: mass,
+    col,
+    trail: []
+  };
 }
 
 function spawnRandom(){
-  if(objects.length>=getMaxBalls()) return false;
-  const r=getBaseR();
-  const x=r+Math.random()*(W-r*2), y=r+Math.random()*(H/2);
-  const ang=Math.random()*Math.PI*2, spd=(2+Math.random()*3)*getLaunchSpeed();
-  objects.push(mkBall(x,y,Math.cos(ang)*spd,Math.sin(ang)*spd));
+  if(objects.length >= getMaxBalls()){
+    return false;
+  }
+
+  const r = getBaseR();
+
+  const x = r + Math.random() * Math.max(1, W - r * 2);
+  const y = r + Math.random() * Math.max(1, H / 2 - r);
+
+  const angle = Math.random() * Math.PI * 2;
+  const speed = (2 + Math.random() * 3) * getSpeedMultiplier();
+
+  objects.push(
+    mkBall(
+      x,
+      y,
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed
+    )
+  );
+
   return true;
 }
 
-for(let i=0;i<3;i++) spawnRandom();
-
-// KE graph
-const KE_LEN=120;
-const keHistory=new Array(KE_LEN).fill(0);
-let keMax=0, keSum=0, keSamples=0;
-const gEl=document.getElementById('ke-graph');
-const gCtx=gEl.getContext('2d');
-
-function drawKEGraph(ke){
-  keHistory.push(ke);if(keHistory.length>KE_LEN)keHistory.shift();
-  if(ke>keMax)keMax=ke;
-  keSum+=ke;keSamples++;
-  const avg=keSamples>0?keSum/keSamples:0;
-
-  const GW=gEl.width,GH=gEl.height;
-  gCtx.clearRect(0,0,GW,GH);
-  // Background
-  gCtx.fillStyle='rgba(0,0,0,0.3)';gCtx.fillRect(0,0,GW,GH);
-  // Grid lines
-  gCtx.strokeStyle='rgba(255,255,255,0.05)';gCtx.lineWidth=0.5;
-  for(let i=1;i<4;i++){const y=GH*i/4;gCtx.beginPath();gCtx.moveTo(0,y);gCtx.lineTo(GW,y);gCtx.stroke();}
-
-  const peak=Math.max(...keHistory,1);
-  // Fill
-  gCtx.beginPath();
-  keHistory.forEach((v,i)=>{
-    const x=(i/(KE_LEN-1))*GW, y=GH-(v/peak)*(GH-2)-1;
-    i===0?gCtx.moveTo(x,y):gCtx.lineTo(x,y);
-  });
-  gCtx.lineTo(GW,GH);gCtx.lineTo(0,GH);gCtx.closePath();
-  const grad=gCtx.createLinearGradient(0,0,0,GH);
-  grad.addColorStop(0,'rgba(159,225,203,0.35)');
-  grad.addColorStop(1,'rgba(159,225,203,0.02)');
-  gCtx.fillStyle=grad;gCtx.fill();
-  // Line
-  gCtx.beginPath();
-  keHistory.forEach((v,i)=>{
-    const x=(i/(KE_LEN-1))*GW, y=GH-(v/peak)*(GH-2)-1;
-    i===0?gCtx.moveTo(x,y):gCtx.lineTo(x,y);
-  });
-  gCtx.strokeStyle='#9FE1CB';gCtx.lineWidth=1.5;gCtx.stroke();
-
-  // Update text
-  document.getElementById('dash-ke').textContent=Math.round(ke).toLocaleString('de-DE');
-  document.getElementById('dash-kemax').textContent=Math.round(keMax).toLocaleString('de-DE');
-  document.getElementById('dash-keavg').textContent=Math.round(avg).toLocaleString('de-DE');
-  document.getElementById('dash-n').textContent=objects.length;
+for(let i = 0; i < 3; i++){
+  spawnRandom();
 }
 
-const drag={active:false,x:0,y:0,startX:0,startY:0};
-const MAX_DRAG=160;
+/* Kinetische-Energie-Diagramm */
 
-canvas.addEventListener('mousedown',e=>{
-  if(objects.length>=getMaxBalls()) return;
-  const r=canvas.getBoundingClientRect();
-  drag.startX=e.clientX-r.left;
-  drag.startY=e.clientY-r.top;
-  drag.x=drag.startX;drag.y=drag.startY;
-  drag.active=true;
-});
+const KE_LENGTH = 120;
+const keHistory = new Array(KE_LENGTH).fill(0);
 
-canvas.addEventListener('mousemove',e=>{
-  if(!drag.active) return;
-  const r=canvas.getBoundingClientRect();
-  drag.x=e.clientX-r.left;
-  drag.y=e.clientY-r.top;
-});
+let keMax = 0;
+let keSum = 0;
+let keSamples = 0;
 
-canvas.addEventListener('mouseup',e=>{
-  if(!drag.active) return;
-  drag.active=false;
-  if(objects.length>=getMaxBalls()) return;
-  const r=canvas.getBoundingClientRect();
-  drag.x=e.clientX-r.left;drag.y=e.clientY-r.top;
-  const dx=drag.startX-drag.x, dy=drag.startY-drag.y;
-  const dist=Math.sqrt(dx*dx+dy*dy);
-  if(dist<4){
-    // Short tap → random direction
-    const ang=Math.random()*Math.PI*2, spd=(2+Math.random()*3)*getLaunchSpeed();
-    objects.push(mkBall(drag.startX,drag.startY,Math.cos(ang)*spd,Math.sin(ang)*spd));
-  } else {
-    const clamped=Math.min(dist,MAX_DRAG);
-    const spd=(clamped/MAX_DRAG)*14*getLaunchSpeed();
-    objects.push(mkBall(drag.startX,drag.startY,(dx/dist)*spd,(dy/dist)*spd));
+const graphCanvas = document.getElementById('ke-graph');
+const graphCtx = graphCanvas.getContext('2d');
+
+function drawKEGraph(ke){
+  keHistory.push(ke);
+
+  if(keHistory.length > KE_LENGTH){
+    keHistory.shift();
   }
+
+  if(ke > keMax){
+    keMax = ke;
+  }
+
+  keSum += ke;
+  keSamples++;
+
+  const average = keSamples > 0
+    ? keSum / keSamples
+    : 0;
+
+  const GW = graphCanvas.width;
+  const GH = graphCanvas.height;
+
+  graphCtx.clearRect(0, 0, GW, GH);
+
+  graphCtx.fillStyle = 'rgba(0,0,0,0.3)';
+  graphCtx.fillRect(0, 0, GW, GH);
+
+  graphCtx.strokeStyle = 'rgba(255,255,255,0.05)';
+  graphCtx.lineWidth = 0.5;
+
+  for(let i = 1; i < 4; i++){
+    const y = GH * i / 4;
+
+    graphCtx.beginPath();
+    graphCtx.moveTo(0, y);
+    graphCtx.lineTo(GW, y);
+    graphCtx.stroke();
+  }
+
+  const peak = Math.max(...keHistory, 1);
+
+  graphCtx.beginPath();
+
+  keHistory.forEach((value, index) => {
+    const x = index / (KE_LENGTH - 1) * GW;
+    const y = GH - value / peak * (GH - 2) - 1;
+
+    if(index === 0){
+      graphCtx.moveTo(x, y);
+    } else {
+      graphCtx.lineTo(x, y);
+    }
+  });
+
+  graphCtx.lineTo(GW, GH);
+  graphCtx.lineTo(0, GH);
+  graphCtx.closePath();
+
+  const gradient = graphCtx.createLinearGradient(0, 0, 0, GH);
+
+  gradient.addColorStop(0, 'rgba(159,225,203,0.35)');
+  gradient.addColorStop(1, 'rgba(159,225,203,0.02)');
+
+  graphCtx.fillStyle = gradient;
+  graphCtx.fill();
+
+  graphCtx.beginPath();
+
+  keHistory.forEach((value, index) => {
+    const x = index / (KE_LENGTH - 1) * GW;
+    const y = GH - value / peak * (GH - 2) - 1;
+
+    if(index === 0){
+      graphCtx.moveTo(x, y);
+    } else {
+      graphCtx.lineTo(x, y);
+    }
+  });
+
+  graphCtx.strokeStyle = '#9FE1CB';
+  graphCtx.lineWidth = 1.5;
+  graphCtx.stroke();
+
+  document.getElementById('dash-ke').textContent =
+    Math.round(ke).toLocaleString('de-DE');
+
+  document.getElementById('dash-kemax').textContent =
+    Math.round(keMax).toLocaleString('de-DE');
+
+  document.getElementById('dash-keavg').textContent =
+    Math.round(average).toLocaleString('de-DE');
+
+  document.getElementById('dash-n').textContent =
+    objects.length;
+}
+
+/* Kugel abschießen */
+
+const drag = {
+  active: false,
+  x: 0,
+  y: 0,
+  startX: 0,
+  startY: 0
+};
+
+const MAX_DRAG = 160;
+
+canvas.addEventListener('mousedown', event => {
+  if(objects.length >= getMaxBalls()){
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+
+  drag.startX = event.clientX - rect.left;
+  drag.startY = event.clientY - rect.top;
+  drag.x = drag.startX;
+  drag.y = drag.startY;
+  drag.active = true;
+});
+
+canvas.addEventListener('mousemove', event => {
+  if(!drag.active){
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+
+  drag.x = event.clientX - rect.left;
+  drag.y = event.clientY - rect.top;
+});
+
+canvas.addEventListener('mouseup', event => {
+  if(!drag.active){
+    return;
+  }
+
+  drag.active = false;
+
+  if(objects.length >= getMaxBalls()){
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+
+  drag.x = event.clientX - rect.left;
+  drag.y = event.clientY - rect.top;
+
+  const dx = drag.startX - drag.x;
+  const dy = drag.startY - drag.y;
+
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  if(distance < 4){
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (2 + Math.random() * 3) * getSpeedMultiplier();
+
+    objects.push(
+      mkBall(
+        drag.startX,
+        drag.startY,
+        Math.cos(angle) * speed,
+        Math.sin(angle) * speed
+      )
+    );
+  } else {
+    const clamped = Math.min(distance, MAX_DRAG);
+    const speed =
+      clamped / MAX_DRAG *
+      14 *
+      getSpeedMultiplier();
+
+    objects.push(
+      mkBall(
+        drag.startX,
+        drag.startY,
+        dx / distance * speed,
+        dy / distance * speed
+      )
+    );
+  }
+
   updateHintMsg();
 });
 
-canvas.addEventListener('mouseleave',()=>{drag.active=false;});
+canvas.addEventListener('mouseleave', () => {
+  drag.active = false;
+});
 
-function wallBounce(o){
-  if(o.x-o.r<0){o.x=o.r;o.vx=Math.abs(o.vx);}
-  if(o.x+o.r>W){o.x=W-o.r;o.vx=-Math.abs(o.vx);}
-  if(o.y-o.r<0){o.y=o.r;o.vy=Math.abs(o.vy);}
-  if(o.y+o.r>H){o.y=H-o.r;o.vy=-Math.abs(o.vy);}
+/* Physik */
+
+function wallBounce(ball){
+  if(ball.x - ball.r < 0){
+    ball.x = ball.r;
+    ball.vx = Math.abs(ball.vx);
+  }
+
+  if(ball.x + ball.r > W){
+    ball.x = W - ball.r;
+    ball.vx = -Math.abs(ball.vx);
+  }
+
+  if(ball.y - ball.r < 0){
+    ball.y = ball.r;
+    ball.vy = Math.abs(ball.vy);
+  }
+
+  if(ball.y + ball.r > H){
+    ball.y = H - ball.r;
+    ball.vy = -Math.abs(ball.vy);
+  }
 }
 
 function collide(){
-  for(let i=0;i<objects.length;i++){
-    for(let j=i+1;j<objects.length;j++){
-      const a=objects[i],b=objects[j];
-      const dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,minD=a.r+b.r;
-      if(d2>=minD*minD||d2<0.001) continue;
-      const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,ov=(minD-d)*0.5;
-      a.x-=nx*ov;a.y-=ny*ov;b.x+=nx*ov;b.y+=ny*ov;
-      const rvx=b.vx-a.vx,rvy=b.vy-a.vy,dot=rvx*nx+rvy*ny;
-      if(dot>0) continue;
-      // Perfectly elastic collision (e=1), mass-correct impulse
-      const imp=-2*dot/(1/a.m+1/b.m);
-      a.vx-=(imp/a.m)*nx;a.vy-=(imp/a.m)*ny;
-      b.vx+=(imp/b.m)*nx;b.vy+=(imp/b.m)*ny;
-      onCollision((a.x+b.x)/2,(a.y+b.y)/2);
+  for(let i = 0; i < objects.length; i++){
+    for(let j = i + 1; j < objects.length; j++){
+
+      const a = objects[i];
+      const b = objects[j];
+
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+
+      const distanceSquared = dx * dx + dy * dy;
+      const minimumDistance = a.r + b.r;
+
+      if(
+        distanceSquared >= minimumDistance * minimumDistance ||
+        distanceSquared < 0.001
+      ){
+        continue;
+      }
+
+      const distance = Math.sqrt(distanceSquared);
+
+      const nx = dx / distance;
+      const ny = dy / distance;
+
+      const overlap = (minimumDistance - distance) * 0.5;
+
+      a.x -= nx * overlap;
+      a.y -= ny * overlap;
+
+      b.x += nx * overlap;
+      b.y += ny * overlap;
+
+      const relativeVX = b.vx - a.vx;
+      const relativeVY = b.vy - a.vy;
+
+      const velocityAlongNormal =
+        relativeVX * nx +
+        relativeVY * ny;
+
+      if(velocityAlongNormal > 0){
+        continue;
+      }
+
+      const impulse =
+        -2 * velocityAlongNormal /
+        (1 / a.m + 1 / b.m);
+
+      a.vx -= impulse / a.m * nx;
+      a.vy -= impulse / a.m * ny;
+
+      b.vx += impulse / b.m * nx;
+      b.vy += impulse / b.m * ny;
+
+      onCollision(
+        (a.x + b.x) / 2,
+        (a.y + b.y) / 2
+      );
     }
   }
 }
 
-function onCollision(cx,cy){
+/* Belohnungen */
+
+function onCollision(x, y){
   state.colCount++;
-  const now=performance.now();
-  let earn=1*getCoinMult();
-  if(getComboLevel()>0){
-    if(now-state.lastComboT<600){
-      state.comboCount=Math.min(state.comboCount+1,20);
+
+  const now = performance.now();
+
+  let earnedCoins = getCoinMult();
+
+  if(getComboLevel() > 0){
+
+    if(now - state.lastComboT < 600){
+      state.comboCount = Math.min(
+        state.comboCount + 1,
+        20
+      );
     } else {
-      state.comboCount=1;
+      state.comboCount = 1;
     }
-    state.lastComboT=now;
-    if(state.comboCount>=3){
-      const bonus=1+(state.comboCount-2)*0.15*getComboLevel();
-      earn*=bonus;
-      document.getElementById('combo-val').textContent=bonus.toFixed(1);
-      document.getElementById('combo-pill').style.opacity='1';
-      setTimeout(()=>document.getElementById('combo-pill').style.opacity='0',1200);
+
+    state.lastComboT = now;
+
+    if(state.comboCount >= 3){
+      const bonus =
+        1 +
+        (state.comboCount - 2) *
+        0.15 *
+        getComboLevel();
+
+      earnedCoins *= bonus;
+
+      document.getElementById('combo-val').textContent =
+        bonus.toFixed(1);
+
+      document.getElementById('combo-pill').style.opacity = '1';
+
+      setTimeout(() => {
+        document.getElementById('combo-pill').style.opacity = '0';
+      }, 1200);
     }
   }
-  earn=Math.ceil(earn);
-  state.coins+=earn;
-  spawnFloat(cx,cy,earn);
+
+  earnedCoins = Math.ceil(earnedCoins);
+
+  state.coins += earnedCoins;
+
+  spawnFloat(x, y, earnedCoins);
   updateUI();
 }
 
-function spawnFloat(x,y,val){
-  const el=document.createElement('div');
-  el.className='float-text';
-  el.textContent='+'+val;
-  el.style.left=x+'px';
-  el.style.top=y+'px';
-  document.getElementById('float-coins').appendChild(el);
-  setTimeout(()=>el.remove(),1200);
+function spawnFloat(x, y, value){
+  const element = document.createElement('div');
+
+  element.className = 'float-text';
+  element.textContent = '+' + value;
+  element.style.left = x + 'px';
+  element.style.top = y + 'px';
+
+  document
+    .getElementById('float-coins')
+    .appendChild(element);
+
+  setTimeout(() => {
+    element.remove();
+  }, 1200);
 }
+
+/* Zeichnen */
 
 function drawGrid(){
-  ctx.strokeStyle='rgba(255,255,255,0.018)';
-  ctx.lineWidth=1;
-  for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-}
+  ctx.strokeStyle = 'rgba(255,255,255,0.018)';
+  ctx.lineWidth = 1;
 
-function drawBall(o){
-  if(o.trail.length>1){
-    ctx.beginPath();ctx.moveTo(o.trail[0].x,o.trail[0].y);
-    for(let i=1;i<o.trail.length;i++) ctx.lineTo(o.trail[i].x,o.trail[i].y);
-    ctx.strokeStyle=o.col+'40';ctx.lineWidth=o.r*0.6;ctx.lineCap='round';ctx.stroke();
-    ctx.lineCap='butt';
+  for(let x = 0; x < W; x += 60){
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
   }
-  ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);
-  ctx.fillStyle=o.col+'dd';ctx.fill();
-  ctx.strokeStyle=o.col;ctx.lineWidth=1.2;ctx.stroke();
-  ctx.beginPath();ctx.arc(o.x-o.r*0.28,o.y-o.r*0.28,o.r*0.2,0,Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,0.22)';ctx.fill();
+
+  for(let y = 0; y < H; y += 60){
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
 }
 
-let lastT=performance.now();
+function drawBall(ball){
+  if(ball.trail.length > 1){
+    ctx.beginPath();
+    ctx.moveTo(ball.trail[0].x, ball.trail[0].y);
+
+    for(let i = 1; i < ball.trail.length; i++){
+      ctx.lineTo(
+        ball.trail[i].x,
+        ball.trail[i].y
+      );
+    }
+
+    ctx.strokeStyle = ball.col + '40';
+    ctx.lineWidth = ball.r * 0.6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+
+  ctx.beginPath();
+  ctx.arc(
+    ball.x,
+    ball.y,
+    ball.r,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fillStyle = ball.col + 'dd';
+  ctx.fill();
+
+  ctx.strokeStyle = ball.col;
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(
+    ball.x - ball.r * 0.28,
+    ball.y - ball.r * 0.28,
+    ball.r * 0.2,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fill();
+}
+
+/* Hauptschleife */
+
+let lastTime = performance.now();
+
 function loop(now){
   requestAnimationFrame(loop);
-  const dt=Math.min((now-lastT)/16.67,3);lastT=now;
-  ctx.fillStyle='#080812';ctx.fillRect(0,0,W,H);
+
+  const delta = Math.min(
+    (now - lastTime) / 16.67,
+    3
+  );
+
+  lastTime = now;
+
+  ctx.fillStyle = '#080812';
+  ctx.fillRect(0, 0, W, H);
+
   drawGrid();
-  for(const o of objects){
-    o.x+=o.vx*dt;o.y+=o.vy*dt;
-    wallBounce(o);
-    o.trail.push({x:o.x,y:o.y});
-    if(o.trail.length>18) o.trail.shift();
-    drawBall(o);
+
+  for(const ball of objects){
+    ball.x += ball.vx * delta;
+    ball.y += ball.vy * delta;
+
+    wallBounce(ball);
+
+    ball.trail.push({
+      x: ball.x,
+      y: ball.y
+    });
+
+    if(ball.trail.length > 18){
+      ball.trail.shift();
+    }
+
+    drawBall(ball);
   }
+
   collide();
 
-  // KE calculation every frame
-  let totalKE=0;
-  for(const o of objects){const s=o.vx*o.vx+o.vy*o.vy;totalKE+=0.5*o.m*s;}
-  drawKEGraph(totalKE);
+  let totalKineticEnergy = 0;
 
-  // Draw drag line
+  for(const ball of objects){
+    const speedSquared =
+      ball.vx * ball.vx +
+      ball.vy * ball.vy;
+
+    totalKineticEnergy +=
+      0.5 *
+      ball.m *
+      speedSquared;
+  }
+
+  drawKEGraph(totalKineticEnergy);
+
   if(drag.active){
-    const dx=drag.startX-drag.x, dy=drag.startY-drag.y;
-    const dist=Math.sqrt(dx*dx+dy*dy);
-    if(dist>4){
-      const clamped=Math.min(dist,MAX_DRAG);
-      const power=clamped/MAX_DRAG;
-      const r=getBaseR();
-      // Ghost ball at spawn point
-      ctx.beginPath();ctx.arc(drag.startX,drag.startY,r,0,Math.PI*2);
-      ctx.strokeStyle=`rgba(255,255,255,${0.15+power*0.3})`;ctx.lineWidth=1.5;
-      ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
-      // Arrow line: from spawn point in shoot direction (opposite of drag)
-      const nx=dx/dist,ny=dy/dist;
-      const lineLen=clamped*0.7;
-      const ex=drag.startX+nx*lineLen, ey=drag.startY+ny*lineLen;
-      ctx.beginPath();ctx.moveTo(drag.startX,drag.startY);ctx.lineTo(ex,ey);
-      const col=`rgba(${Math.round(100+155*power)},${Math.round(200-100*power)},255,${0.5+power*0.4})`;
-      ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
-      // Arrowhead
-      const ang=Math.atan2(ny,nx);
+    const dx = drag.startX - drag.x;
+    const dy = drag.startY - drag.y;
+
+    const distance = Math.sqrt(
+      dx * dx +
+      dy * dy
+    );
+
+    if(distance > 4){
+      const clamped = Math.min(distance, MAX_DRAG);
+      const power = clamped / MAX_DRAG;
+      const radius = getBaseR();
+
       ctx.beginPath();
-      ctx.moveTo(ex,ey);
-      ctx.lineTo(ex-12*Math.cos(ang-0.4),ey-12*Math.sin(ang-0.4));
-      ctx.lineTo(ex-12*Math.cos(ang+0.4),ey-12*Math.sin(ang+0.4));
-      ctx.closePath();ctx.fillStyle=col;ctx.fill();
-      // Power text
-      ctx.fillStyle='rgba(255,255,255,0.55)';
-      ctx.font='10px ui-monospace,monospace';
-      ctx.fillText(Math.round(power*100)+'%',drag.startX+8,drag.startY-r-6);
+      ctx.arc(
+        drag.startX,
+        drag.startY,
+        radius,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.strokeStyle =
+        `rgba(255,255,255,${0.15 + power * 0.3})`;
+
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const nx = dx / distance;
+      const ny = dy / distance;
+
+      const lineLength = clamped * 0.7;
+
+      const endX =
+        drag.startX +
+        nx * lineLength;
+
+      const endY =
+        drag.startY +
+        ny * lineLength;
+
+      ctx.beginPath();
+      ctx.moveTo(
+        drag.startX,
+        drag.startY
+      );
+
+      ctx.lineTo(
+        endX,
+        endY
+      );
+
+      const color =
+        `rgba(` +
+        `${Math.round(100 + 155 * power)},` +
+        `${Math.round(200 - 100 * power)},` +
+        `255,` +
+        `${0.5 + power * 0.4}` +
+        `)`;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const angle = Math.atan2(ny, nx);
+
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+
+      ctx.lineTo(
+        endX - 12 * Math.cos(angle - 0.4),
+        endY - 12 * Math.sin(angle - 0.4)
+      );
+
+      ctx.lineTo(
+        endX - 12 * Math.cos(angle + 0.4),
+        endY - 12 * Math.sin(angle + 0.4)
+      );
+
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '10px ui-monospace,monospace';
+
+      ctx.fillText(
+        Math.round(power * 100) + '%',
+        drag.startX + 8,
+        drag.startY - radius - 6
+      );
     }
   }
 
-  if((now-state.lastColT)>800){
-    const elapsed=(now-state.lastColT)/1000;
-    state.colPerSec=Math.round(state.colCount/elapsed*10)/10;
-    state.colCount=0;state.lastColT=now;
-    document.getElementById('col-val').textContent=state.colPerSec.toFixed(1);
+  if(now - state.lastColT > 800){
+    const elapsed =
+      (now - state.lastColT) / 1000;
+
+    state.colPerSec =
+      Math.round(
+        state.colCount /
+        elapsed *
+        10
+      ) / 10;
+
+    state.colCount = 0;
+    state.lastColT = now;
+
+    document.getElementById('col-val').textContent =
+      state.colPerSec.toFixed(1);
   }
 }
+
 requestAnimationFrame(loop);
 
+/* UI */
+
 function updateUI(){
-  document.getElementById('coins-val').textContent=Math.floor(state.coins).toLocaleString('de-DE');
+  document.getElementById('coins-val').textContent =
+    Math.floor(state.coins).toLocaleString('de-DE');
+
   updateButtons();
 }
 
-function getCost(key,lvl){
-  const arr=costs[key];
-  if(!arr||lvl>=arr.length) return Infinity;
-  return arr[lvl];
-}
-
 function getBallCost(){
-  return Math.floor(25*Math.pow(1.6,objects.length-3));
+  return Math.floor(
+    25 *
+    Math.pow(
+      1.6,
+      Math.max(0, objects.length - 3)
+    )
+  );
 }
 
 function updateButtons(){
-  const c=state.coins;
-  const bc=getBallCost();
-  const tooMany=objects.length>=getMaxBalls();
-  const bBtn=document.getElementById('btn-spawn');
-  bBtn.disabled=c<bc||tooMany;
-  bBtn.className='upgrade-btn'+(c>=bc&&!tooMany?' can-afford':'');
-  document.getElementById('cost-spawn').textContent=tooMany?`Max (${getMaxBalls()})`:bc+' 🪙';
+  const coins = state.coins;
 
-  function upd(key,id,costId){
-    const lvl=upgrades[key];
-    const cost=getCost(key,lvl);
-    const btn=document.getElementById(id);
-    const maxed=cost===Infinity;
-    btn.disabled=maxed||c<cost;
-    btn.className='upgrade-btn'+(!maxed&&c>=cost?' can-afford':'');
-    const cel=document.getElementById(costId);
-    if(maxed){cel.textContent='MAX ✓';cel.className='btn-cost maxed';}
-    else{cel.textContent=cost+' 🪙';cel.className='btn-cost';}
-  }
-  upd('size','btn-size','cost-size');
-  upd('speed','btn-speed','cost-speed');
-  upd('mult','btn-mult','cost-mult');
-  upd('elastic','btn-elastic','cost-elastic');
-  upd('cap','btn-cap','cost-cap');
-  upd('combo','btn-combo','cost-combo');
-}
+  const ballCost = getBallCost();
+  const reachedMaximum =
+    objects.length >= getMaxBalls();
 
-function buy(cost,fn){
-  if(state.coins<cost) return;
-  state.coins-=cost;fn();updateUI();
-}
+  const spawnButton =
+    document.getElementById('btn-spawn');
 
-document.getElementById('btn-spawn').addEventListener('click',()=>{
-  const cost=getBallCost();
-  buy(cost,()=>{spawnRandom();updateHintMsg();});
-});
-document.getElementById('btn-size').addEventListener('click',()=>{
-  const lvl=upgrades.size,cost=getCost('size',lvl);
-  if(cost===Infinity) return;
-  buy(cost,()=>{upgrades.size++;for(const o of objects) o.r=getBaseR()*(0.85+Math.random()*0.3);});
-});
-document.getElementById('btn-speed').addEventListener('click',()=>{
-  const lvl=upgrades.speed,cost=getCost('speed',lvl);
-  if(cost===Infinity) return;
-  buy(cost,()=>{
-    upgrades.speed++;
-    for(const o of objects){
-      const s=Math.sqrt(o.vx*o.vx+o.vy*o.vy)||1;
-      const ns=s*1.25;
-      o.vx=(o.vx/s)*ns;o.vy=(o.vy/s)*ns;
+  spawnButton.disabled =
+    coins < ballCost ||
+    reachedMaximum;
+
+  spawnButton.className =
+    'upgrade-btn' +
+    (
+      coins >= ballCost &&
+      !reachedMaximum
+        ? ' can-afford'
+        : ''
+    );
+
+  document.getElementById('cost-spawn').textContent =
+    reachedMaximum
+      ? `Max (${getMaxBalls()})`
+      : ballCost + ' 🪙';
+
+  function updateUpgradeButton(key, buttonId, costId){
+    const level = upgrades[key];
+    const cost = getCost(key, level);
+
+    const button =
+      document.getElementById(buttonId);
+
+    const costElement =
+      document.getElementById(costId);
+
+    const maxed = cost === Infinity;
+
+    button.disabled =
+      maxed ||
+      coins < cost;
+
+    button.className =
+      'upgrade-btn' +
+      (
+        !maxed &&
+        coins >= cost
+          ? ' can-afford'
+          : ''
+      );
+
+    if(maxed){
+      costElement.textContent = 'MAX ✓';
+      costElement.className = 'btn-cost maxed';
+    } else {
+      costElement.textContent = cost + ' 🪙';
+      costElement.className = 'btn-cost';
     }
+  }
+
+  updateUpgradeButton(
+    'size',
+    'btn-size',
+    'cost-size'
+  );
+
+  updateUpgradeButton(
+    'speed',
+    'btn-speed',
+    'cost-speed'
+  );
+
+  updateUpgradeButton(
+    'mult',
+    'btn-mult',
+    'cost-mult'
+  );
+
+  updateUpgradeButton(
+    'cap',
+    'btn-cap',
+    'cost-cap'
+  );
+
+  updateUpgradeButton(
+    'combo',
+    'btn-combo',
+    'cost-combo'
+  );
+}
+
+function buy(cost, action){
+  if(
+    !Number.isFinite(cost) ||
+    state.coins < cost
+  ){
+    return;
+  }
+
+  state.coins -= cost;
+
+  action();
+  updateUI();
+}
+
+/* Shop-Buttons */
+
+document
+  .getElementById('btn-spawn')
+  .addEventListener('click', () => {
+    const cost = getBallCost();
+
+    buy(cost, () => {
+      spawnRandom();
+      updateHintMsg();
+    });
   });
-});
-document.getElementById('btn-mult').addEventListener('click',()=>{
-  const lvl=upgrades.mult,cost=getCost('mult',lvl);
-  if(cost===Infinity) return;
-  buy(cost,()=>{upgrades.mult++;});
-});
-document.getElementById('btn-elastic').addEventListener('click',()=>{
-  const lvl=upgrades.elastic,cost=getCost('elastic',lvl);
-  if(cost===Infinity) return;
-  buy(cost,()=>{
-    upgrades.elastic++;
-    for(const o of objects){o.vx*=1.2;o.vy*=1.2;}
+
+document
+  .getElementById('btn-size')
+  .addEventListener('click', () => {
+    const level = upgrades.size;
+    const cost = getCost('size', level);
+
+    buy(cost, () => {
+      upgrades.size++;
+
+      for(const ball of objects){
+        ball.r =
+          getBaseR() *
+          (0.85 + Math.random() * 0.3);
+
+        ball.m =
+          ball.r *
+          ball.r *
+          0.01;
+
+        ball.x = Math.max(
+          ball.r,
+          Math.min(W - ball.r, ball.x)
+        );
+
+        ball.y = Math.max(
+          ball.r,
+          Math.min(H - ball.r, ball.y)
+        );
+      }
+    });
   });
-});
-document.getElementById('btn-cap').addEventListener('click',()=>{
-  const lvl=upgrades.cap,cost=getCost('cap',lvl);
-  if(cost===Infinity) return;
-  buy(cost,()=>{upgrades.cap++;updateHintMsg();});
-});
-document.getElementById('btn-combo').addEventListener('click',()=>{
-  const lvl=upgrades.combo,cost=getCost('combo',lvl);
-  if(cost===Infinity) return;
-  buy(cost,()=>{upgrades.combo++;});
-});
+
+document
+  .getElementById('btn-speed')
+  .addEventListener('click', () => {
+    const level = upgrades.speed;
+    const cost = getCost('speed', level);
+
+    buy(cost, () => {
+      upgrades.speed++;
+
+      for(const ball of objects){
+        ball.vx *= 1.25;
+        ball.vy *= 1.25;
+      }
+    });
+  });
+
+document
+  .getElementById('btn-mult')
+  .addEventListener('click', () => {
+    const level = upgrades.mult;
+    const cost = getCost('mult', level);
+
+    buy(cost, () => {
+      upgrades.mult++;
+    });
+  });
+
+document
+  .getElementById('btn-cap')
+  .addEventListener('click', () => {
+    const level = upgrades.cap;
+    const cost = getCost('cap', level);
+
+    buy(cost, () => {
+      upgrades.cap++;
+      updateHintMsg();
+    });
+  });
+
+document
+  .getElementById('btn-combo')
+  .addEventListener('click', () => {
+    const level = upgrades.combo;
+    const cost = getCost('combo', level);
+
+    buy(cost, () => {
+      upgrades.combo++;
+    });
+  });
 
 function updateHintMsg(){
-  const max=getMaxBalls();
-  const cur=objects.length;
-  if(cur>=max) document.getElementById('hint-msg').textContent='Max. Kugeln erreicht – Kapazität kaufen!';
-  else document.getElementById('hint-msg').textContent=`Drag → schießen · Klick = zufällig (${cur}/${max})`;
+  const maximum = getMaxBalls();
+  const current = objects.length;
+
+  const hint =
+    document.getElementById('hint-msg');
+
+  if(current >= maximum){
+    hint.textContent =
+      'Max. Kugeln erreicht – Kapazität kaufen!';
+  } else {
+    hint.textContent =
+      `Drag → schießen · Klick = zufällig (${current}/${maximum})`;
+  }
 }
 
 updateUI();
 updateHintMsg();
+
 })();
 </script>
+
 </body>
 </html>
