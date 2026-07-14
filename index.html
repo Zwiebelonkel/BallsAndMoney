@@ -467,7 +467,7 @@ body.graph-hidden #dashboard{
       </div>
 
       <div id="hint-msg">
-        Drag → Kugel schießen · Kurzer Klick = zufällig
+        Drag/Touch → Kugel schießen · Kurzer Tipp/Klick = zufällig
       </div>
     </div>
 
@@ -524,13 +524,13 @@ body.graph-hidden #dashboard{
 
       <button class="upgrade-btn" id="btn-size">
         <div class="btn-name">Größe +</div>
-        <div class="btn-desc">Alle Kugeln wachsen moderat</div>
+        <div class="btn-desc">Alle Kugeln wachsen leicht</div>
         <div class="btn-cost" id="cost-size">90 🪙</div>
       </button>
 
       <button class="upgrade-btn" id="btn-speed">
         <div class="btn-name">Tempo +</div>
-        <div class="btn-desc">Erhöht die Geschwindigkeit moderat</div>
+        <div class="btn-desc">Erhöht die Geschwindigkeit leicht</div>
         <div class="btn-cost" id="cost-speed">140 🪙</div>
       </button>
 
@@ -542,7 +542,7 @@ body.graph-hidden #dashboard{
 
       <button class="upgrade-btn" id="btn-cap">
         <div class="btn-name">Kapazität +</div>
-        <div class="btn-desc">Maximale Kugeln +4</div>
+        <div class="btn-desc">Maximale Kugeln +1</div>
         <div class="btn-cost" id="cost-cap">260 🪙</div>
       </button>
 
@@ -773,8 +773,22 @@ function getCost(key, level){
   );
 }
 
+function getArenaScale(){
+  return 1 + Math.floor(objects.length / 10) * 0.18;
+}
+
 function getBaseR(){
-  return 14 + upgrades.size * 3;
+  return (14 + upgrades.size * 1.5) / getArenaScale();
+}
+
+function resizeBallsToCurrentArena(){
+  for(const ball of objects){
+    ball.r = getBaseR() * (0.85 + Math.random() * 0.3);
+    ball.m = ball.r * ball.r * 0.01;
+    ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x));
+    ball.y = Math.max(ball.r, Math.min(H - ball.r, ball.y));
+    ball.trail = [];
+  }
 }
 
 function getCoinMult(){
@@ -782,7 +796,7 @@ function getCoinMult(){
 }
 
 function getMaxBalls(){
-  return 5 + upgrades.cap * 4;
+  return 5 + upgrades.cap;
 }
 
 function getComboLevel(){
@@ -790,7 +804,7 @@ function getComboLevel(){
 }
 
 function getSpeedMultiplier(){
-  return Math.pow(1.18, upgrades.speed);
+  return Math.pow(1.1, upgrades.speed);
 }
 
 let objectIndex = 0;
@@ -880,6 +894,8 @@ function loadGame(){
           col: ball.col || COLORS[hueIdx % COLORS.length],
           trail: []
         }));
+
+      resizeBallsToCurrentArena();
     }
 
     return true;
@@ -957,6 +973,8 @@ function spawnRandom(){
   const angle = Math.random() * Math.PI * 2;
   const speed = (2 + Math.random() * 3) * getSpeedMultiplier();
 
+  const previousArenaScale = getArenaScale();
+
   objects.push(
     mkBall(
       x,
@@ -965,6 +983,10 @@ function spawnRandom(){
       Math.sin(angle) * speed
     )
   );
+
+  if(getArenaScale() !== previousArenaScale){
+    resizeBallsToCurrentArena();
+  }
 
   return true;
 }
@@ -1094,10 +1116,12 @@ const drag = {
 
 const MAX_DRAG = 160;
 
-canvas.addEventListener('mousedown', event => {
+function beginShot(event){
   if(objects.length >= getMaxBalls()){
     return;
   }
+
+  event.preventDefault();
 
   const point = getCanvasPoint(event);
 
@@ -1106,25 +1130,36 @@ canvas.addEventListener('mousedown', event => {
   drag.x = drag.startX;
   drag.y = drag.startY;
   drag.active = true;
-});
 
-canvas.addEventListener('mousemove', event => {
+  if(canvas.setPointerCapture){
+    canvas.setPointerCapture(event.pointerId);
+  }
+}
+
+function moveShot(event){
   if(!drag.active){
     return;
   }
+
+  event.preventDefault();
 
   const point = getCanvasPoint(event);
 
   drag.x = point.x;
   drag.y = point.y;
-});
+}
 
-canvas.addEventListener('mouseup', event => {
+function finishShot(event){
   if(!drag.active){
     return;
   }
 
+  event.preventDefault();
   drag.active = false;
+
+  if(canvas.releasePointerCapture && canvas.hasPointerCapture(event.pointerId)){
+    canvas.releasePointerCapture(event.pointerId);
+  }
 
   if(objects.length >= getMaxBalls()){
     return;
@@ -1139,6 +1174,7 @@ canvas.addEventListener('mouseup', event => {
   const dy = drag.startY - drag.y;
 
   const distance = Math.sqrt(dx * dx + dy * dy);
+  const previousArenaScale = getArenaScale();
 
   if(distance < 4){
     const angle = Math.random() * Math.PI * 2;
@@ -1169,13 +1205,22 @@ canvas.addEventListener('mouseup', event => {
     );
   }
 
+  if(getArenaScale() !== previousArenaScale){
+    resizeBallsToCurrentArena();
+  }
+
   updateHintMsg();
   queueSave();
-});
+}
 
-canvas.addEventListener('mouseleave', () => {
+function cancelShot(){
   drag.active = false;
-});
+}
+
+canvas.addEventListener('pointerdown', beginShot);
+canvas.addEventListener('pointermove', moveShot);
+canvas.addEventListener('pointerup', finishShot);
+canvas.addEventListener('pointercancel', cancelShot);
 
 /* Physik */
 
@@ -1789,27 +1834,7 @@ document
 
     buy(cost, () => {
       upgrades.size++;
-
-      for(const ball of objects){
-        ball.r =
-          getBaseR() *
-          (0.85 + Math.random() * 0.3);
-
-        ball.m =
-          ball.r *
-          ball.r *
-          0.01;
-
-        ball.x = Math.max(
-          ball.r,
-          Math.min(W - ball.r, ball.x)
-        );
-
-        ball.y = Math.max(
-          ball.r,
-          Math.min(H - ball.r, ball.y)
-        );
-      }
+      resizeBallsToCurrentArena();
     });
   });
 
@@ -1823,8 +1848,8 @@ document
       upgrades.speed++;
 
       for(const ball of objects){
-        ball.vx *= 1.18;
-        ball.vy *= 1.18;
+        ball.vx *= 1.1;
+        ball.vy *= 1.1;
       }
     });
   });
@@ -1907,7 +1932,7 @@ function updateHintMsg(){
       'Max. Kugeln erreicht – Kapazität kaufen!';
   } else {
     hint.textContent =
-      `Drag → schießen · Klick = zufällig (${current}/${maximum})`;
+      `Drag/Touch → schießen · Tipp/Klick = zufällig (${current}/${maximum})`;
   }
 }
 
