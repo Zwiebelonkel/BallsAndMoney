@@ -1368,6 +1368,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const panel = getElementById<HTMLElement>(panelId);
       const close = getElementById<HTMLButtonElement>(closeId);
 
+      if(panel.parentElement !== document.body){
+        document.body.appendChild(panel);
+      }
+
       function setOpen(isOpen){
         panel.classList.toggle('is-open', isOpen);
         panel.setAttribute('aria-hidden', String(!isOpen));
