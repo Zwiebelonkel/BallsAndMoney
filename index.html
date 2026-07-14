@@ -297,17 +297,35 @@ canvas{
   border-radius:10px;
   padding:10px 12px;
   pointer-events:none;
-  width:220px;
+  width:450px;
 }
 
-#dash-header{
+.graph-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+
+.graph-card{
+  min-width:0;
+}
+
+.graph-card canvas{
+  display:block;
+  width:100%;
+  height:54px;
+  border-radius:4px;
+  margin-top:7px;
+}
+
+.dash-header{
   display:flex;
   justify-content:space-between;
   align-items:baseline;
   margin-bottom:2px;
 }
 
-#dash-label{
+.dash-label{
   font-size:9px;
   color:var(--muted);
   text-transform:uppercase;
@@ -322,21 +340,18 @@ canvas{
   line-height:1;
 }
 
-#dash-collisions-unit{
+.dash-collisions-unit{
   font-size:10px;
   color:var(--muted);
   margin-left:2px;
 }
 
-#collision-graph{
+#collision-graph,
+#money-graph{
   display:block;
-  width:100%;
-  height:54px;
-  border-radius:4px;
-  margin-top:7px;
 }
 
-#dash-sub{
+.dash-sub{
   display:flex;
   justify-content:space-between;
   margin-top:5px;
@@ -437,7 +452,7 @@ body.graph-hidden #dashboard{
   #dashboard{
     left:8px;
     bottom:8px;
-    width:min(210px,calc(100% - 16px));
+    width:min(450px,calc(100% - 16px));
   }
 }
 </style>
@@ -475,28 +490,43 @@ body.graph-hidden #dashboard{
 
     <div id="dashboard">
 
-      <div id="dash-header">
-        <span id="dash-label">Kollisionen</span>
-      </div>
+      <div class="graph-grid">
+        <div class="graph-card">
+          <div class="dash-header">
+            <span class="dash-label">Kollisionen</span>
+          </div>
 
-      <div>
-        <span id="dash-collisions">0</span>
-        <span id="dash-collisions-unit">/s</span>
-      </div>
+          <div>
+            <span id="dash-collisions">0</span>
+            <span class="dash-collisions-unit">/s</span>
+          </div>
 
-      <canvas id="collision-graph" width="196" height="54"></canvas>
+          <canvas id="collision-graph" width="205" height="54"></canvas>
 
-      <div id="dash-sub">
-        <div class="dash-stat">
-          max <span id="dash-collisions-max">0</span>
+          <div class="dash-sub">
+            <div class="dash-stat">max <span id="dash-collisions-max">0</span></div>
+            <div class="dash-stat">Ø <span id="dash-collisions-avg">0</span></div>
+            <div class="dash-stat">Kugeln <span id="dash-n">0</span></div>
+          </div>
         </div>
 
-        <div class="dash-stat">
-          Ø <span id="dash-collisions-avg">0</span>
-        </div>
+        <div class="graph-card">
+          <div class="dash-header">
+            <span class="dash-label">Money</span>
+          </div>
 
-        <div class="dash-stat">
-          Kugeln <span id="dash-n">0</span>
+          <div>
+            <span id="dash-money">0</span>
+            <span class="dash-collisions-unit">/s</span>
+          </div>
+
+          <canvas id="money-graph" width="205" height="54"></canvas>
+
+          <div class="dash-sub">
+            <div class="dash-stat">max <span id="dash-money-max">0</span></div>
+            <div class="dash-stat">Ø <span id="dash-money-avg">0</span></div>
+            <div class="dash-stat">Global x<span id="dash-global-mult">1</span></div>
+          </div>
         </div>
       </div>
 
@@ -524,14 +554,8 @@ body.graph-hidden #dashboard{
 
       <button class="upgrade-btn" id="btn-size">
         <div class="btn-name">Größe +</div>
-        <div class="btn-desc">Alle Kugeln wachsen leicht</div>
+        <div class="btn-desc">Nur neue Kugeln wachsen leicht</div>
         <div class="btn-cost" id="cost-size">90 🪙</div>
-      </button>
-
-      <button class="upgrade-btn" id="btn-speed">
-        <div class="btn-name">Tempo +</div>
-        <div class="btn-desc">Erhöht die Geschwindigkeit leicht</div>
-        <div class="btn-cost" id="cost-speed">140 🪙</div>
       </button>
 
       <button class="upgrade-btn" id="btn-mult">
@@ -554,8 +578,16 @@ body.graph-hidden #dashboard{
 
       <button class="upgrade-btn" id="btn-launch">
         <div class="btn-name">Launch-Power</div>
-        <div class="btn-desc">Drag-Schüsse starten kräftiger</div>
+        <div class="btn-desc">Neue Kugeln starten kräftiger</div>
         <div class="btn-cost" id="cost-launch">110 🪙</div>
+      </button>
+
+      <div class="section-label">Prestige</div>
+
+      <button class="upgrade-btn" id="btn-prestige">
+        <div class="btn-name">Prestige</div>
+        <div class="btn-desc">Reset für permanenten globalen Geld-Multiplikator</div>
+        <div class="btn-cost" id="cost-prestige">5.000.000 🪙</div>
       </button>
 
       <div class="section-label">Anzeige</div>
@@ -729,8 +761,11 @@ function applyPreferences(){
 const state = {
   coins: 0,
   colPerSec: 0,
+  moneyPerSec: 0,
   lastColT: performance.now(),
   colCount: 0,
+  moneyCount: 0,
+  prestige: 0,
   comboCount: 0,
   lastComboT: 0
 };
@@ -739,10 +774,6 @@ const upgradeConfig = {
   size: {
     baseCost: 90,
     growth: 2.25
-  },
-  speed: {
-    baseCost: 140,
-    growth: 2.35
   },
   mult: {
     baseCost: 180,
@@ -764,7 +795,6 @@ const upgradeConfig = {
 
 const upgrades = {
   size: 0,
-  speed: 0,
   mult: 0,
   cap: 0,
   combo: 0,
@@ -784,12 +814,12 @@ function getCost(key, level){
   );
 }
 
-function getArenaScale(){
-  return 1 + Math.floor(objects.length / 10) * 0.5;
+function getArenaScale(ballCount = objects.length){
+  return 1 + Math.floor(ballCount / 5) * 0.85;
 }
 
-function getBaseR(){
-  return (14 + upgrades.size * 1.5) / getArenaScale();
+function getBaseR(ballCount = objects.length){
+  return (14 + upgrades.size * 1.5) / getArenaScale(ballCount);
 }
 
 function resizeBallsToCurrentArena(){
@@ -802,8 +832,12 @@ function resizeBallsToCurrentArena(){
   }
 }
 
+function getGlobalMoneyMult(){
+  return 1 + (state.prestige || 0) * 0.35;
+}
+
 function getCoinMult(){
-  return 1 + upgrades.mult * 0.55;
+  return (1 + upgrades.mult * 0.55) * getGlobalMoneyMult();
 }
 
 function getMaxBalls(){
@@ -812,10 +846,6 @@ function getMaxBalls(){
 
 function getComboLevel(){
   return upgrades.combo;
-}
-
-function getSpeedMultiplier(){
-  return Math.pow(1.1, upgrades.speed);
 }
 
 function getLaunchPowerMultiplier(){
@@ -829,7 +859,8 @@ function getSaveData(){
   return {
     version: 1,
     state: {
-      coins: state.coins
+      coins: state.coins,
+      prestige: state.prestige || 0
     },
     upgrades: { ...upgrades },
     preferences: { ...preferences },
@@ -876,6 +907,10 @@ function loadGame(){
       state.coins = data.state.coins;
     }
 
+    if(data.state && Number.isFinite(data.state.prestige)){
+      state.prestige = data.state.prestige;
+    }
+
     if(data.upgrades){
       for(const key of Object.keys(upgrades)){
         if(Number.isFinite(data.upgrades[key])){
@@ -910,7 +945,10 @@ function loadGame(){
           trail: []
         }));
 
-      resizeBallsToCurrentArena();
+      for(const ball of objects){
+        ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x));
+        ball.y = Math.max(ball.r, Math.min(H - ball.r, ball.y));
+      }
     }
 
     return true;
@@ -925,7 +963,10 @@ function resetGame(){
   localStorage.removeItem(SAVE_KEY);
   state.coins = 0;
   state.colPerSec = 0;
+  state.moneyPerSec = 0;
   state.colCount = 0;
+  state.moneyCount = 0;
+  state.prestige = 0;
   state.comboCount = 0;
   state.lastComboT = 0;
 
@@ -943,6 +984,10 @@ function resetGame(){
   collisionSum = 0;
   collisionSamples = 0;
   collisionHistory.fill(0);
+  moneyMax = 0;
+  moneySum = 0;
+  moneySamples = 0;
+  moneyHistory.fill(0);
 
   applyPreferences();
   updateUI();
@@ -982,7 +1027,7 @@ function spawnRandom(){
   const y = r + Math.random() * Math.max(1, H / 2 - r);
 
   const angle = Math.random() * Math.PI * 2;
-  const speed = (2 + Math.random() * 3) * getSpeedMultiplier();
+  const speed = (2 + Math.random() * 3) * getLaunchPowerMultiplier();
 
   const previousArenaScale = getArenaScale();
 
@@ -1002,113 +1047,136 @@ function spawnRandom(){
   return true;
 }
 
-/* Kollisions-Diagramm */
+/* Diagramme */
 
-const COLLISION_GRAPH_LENGTH = 120;
-const collisionHistory = new Array(COLLISION_GRAPH_LENGTH).fill(0);
+const GRAPH_LENGTH = 120;
+const collisionHistory = new Array(GRAPH_LENGTH).fill(0);
+const moneyHistory = new Array(GRAPH_LENGTH).fill(0);
 
 let collisionMax = 0;
 let collisionSum = 0;
 let collisionSamples = 0;
+let moneyMax = 0;
+let moneySum = 0;
+let moneySamples = 0;
 
-const graphCanvas = document.getElementById('collision-graph');
-const graphCtx = graphCanvas.getContext('2d');
+const collisionGraphCanvas = document.getElementById('collision-graph');
+const collisionGraphCtx = collisionGraphCanvas.getContext('2d');
+const moneyGraphCanvas = document.getElementById('money-graph');
+const moneyGraphCtx = moneyGraphCanvas.getContext('2d');
 
 loadGame();
 
-function drawCollisionGraph(collisionsPerSecond){
-  collisionHistory.push(collisionsPerSecond);
+function drawGraph(canvasContext, canvasElement, history, color){
+  const GW = canvasElement.width;
+  const GH = canvasElement.height;
 
-  if(collisionHistory.length > COLLISION_GRAPH_LENGTH){
-    collisionHistory.shift();
-  }
-
-  if(collisionsPerSecond > collisionMax){
-    collisionMax = collisionsPerSecond;
-  }
-
-  collisionSum += collisionsPerSecond;
-  collisionSamples++;
-
-  const average = collisionSamples > 0
-    ? collisionSum / collisionSamples
-    : 0;
-
-  const GW = graphCanvas.width;
-  const GH = graphCanvas.height;
-
-  graphCtx.clearRect(0, 0, GW, GH);
-
-  graphCtx.fillStyle = cssVar('--graph-bg');
-  graphCtx.fillRect(0, 0, GW, GH);
-
-  graphCtx.strokeStyle = 'rgba(255,255,255,0.05)';
-  graphCtx.lineWidth = 0.5;
+  canvasContext.clearRect(0, 0, GW, GH);
+  canvasContext.fillStyle = cssVar('--graph-bg');
+  canvasContext.fillRect(0, 0, GW, GH);
+  canvasContext.strokeStyle = 'rgba(255,255,255,0.05)';
+  canvasContext.lineWidth = 0.5;
 
   for(let i = 1; i < 4; i++){
     const y = GH * i / 4;
-
-    graphCtx.beginPath();
-    graphCtx.moveTo(0, y);
-    graphCtx.lineTo(GW, y);
-    graphCtx.stroke();
+    canvasContext.beginPath();
+    canvasContext.moveTo(0, y);
+    canvasContext.lineTo(GW, y);
+    canvasContext.stroke();
   }
 
-  const peak = Math.max(...collisionHistory, 1);
+  const peak = Math.max(...history, 1);
 
-  graphCtx.beginPath();
-
-  collisionHistory.forEach((value, index) => {
-    const x = index / (COLLISION_GRAPH_LENGTH - 1) * GW;
+  canvasContext.beginPath();
+  history.forEach((value, index) => {
+    const x = index / (GRAPH_LENGTH - 1) * GW;
     const y = GH - value / peak * (GH - 2) - 1;
 
     if(index === 0){
-      graphCtx.moveTo(x, y);
+      canvasContext.moveTo(x, y);
     } else {
-      graphCtx.lineTo(x, y);
+      canvasContext.lineTo(x, y);
     }
   });
 
-  graphCtx.lineTo(GW, GH);
-  graphCtx.lineTo(0, GH);
-  graphCtx.closePath();
+  canvasContext.lineTo(GW, GH);
+  canvasContext.lineTo(0, GH);
+  canvasContext.closePath();
 
-  const gradient = graphCtx.createLinearGradient(0, 0, 0, GH);
+  const gradient = canvasContext.createLinearGradient(0, 0, 0, GH);
+  gradient.addColorStop(0, preferences.colorMode === 'mono' ? getMonoSoftColor(0.28) : color.fill);
+  gradient.addColorStop(1, preferences.colorMode === 'mono' ? getMonoSoftColor(0.02) : color.fade);
+  canvasContext.fillStyle = gradient;
+  canvasContext.fill();
 
-  gradient.addColorStop(0, preferences.colorMode === 'mono' ? getMonoSoftColor(0.28) : 'rgba(159,225,203,0.35)');
-  gradient.addColorStop(1, preferences.colorMode === 'mono' ? getMonoSoftColor(0.02) : 'rgba(159,225,203,0.02)');
-
-  graphCtx.fillStyle = gradient;
-  graphCtx.fill();
-
-  graphCtx.beginPath();
-
-  collisionHistory.forEach((value, index) => {
-    const x = index / (COLLISION_GRAPH_LENGTH - 1) * GW;
+  canvasContext.beginPath();
+  history.forEach((value, index) => {
+    const x = index / (GRAPH_LENGTH - 1) * GW;
     const y = GH - value / peak * (GH - 2) - 1;
 
     if(index === 0){
-      graphCtx.moveTo(x, y);
+      canvasContext.moveTo(x, y);
     } else {
-      graphCtx.lineTo(x, y);
+      canvasContext.lineTo(x, y);
     }
   });
 
-  graphCtx.strokeStyle = preferences.colorMode === 'mono' ? getMonoInkColor() : '#9FE1CB';
-  graphCtx.lineWidth = 1.5;
-  graphCtx.stroke();
+  canvasContext.strokeStyle = preferences.colorMode === 'mono' ? getMonoInkColor() : color.line;
+  canvasContext.lineWidth = 1.5;
+  canvasContext.stroke();
+}
+
+function pushGraphSample(history, value){
+  history.push(value);
+
+  if(history.length > GRAPH_LENGTH){
+    history.shift();
+  }
+}
+
+function drawDashboard(){
+  pushGraphSample(collisionHistory, state.colPerSec);
+  pushGraphSample(moneyHistory, state.moneyPerSec);
+
+  collisionMax = Math.max(collisionMax, state.colPerSec);
+  collisionSum += state.colPerSec;
+  collisionSamples++;
+
+  moneyMax = Math.max(moneyMax, state.moneyPerSec);
+  moneySum += state.moneyPerSec;
+  moneySamples++;
+
+  const collisionAverage = collisionSamples > 0 ? collisionSum / collisionSamples : 0;
+  const moneyAverage = moneySamples > 0 ? moneySum / moneySamples : 0;
+
+  drawGraph(collisionGraphCtx, collisionGraphCanvas, collisionHistory, {
+    line: '#9FE1CB',
+    fill: 'rgba(159,225,203,0.35)',
+    fade: 'rgba(159,225,203,0.02)'
+  });
+
+  drawGraph(moneyGraphCtx, moneyGraphCanvas, moneyHistory, {
+    line: '#FAC775',
+    fill: 'rgba(250,199,117,0.35)',
+    fade: 'rgba(250,199,117,0.02)'
+  });
 
   document.getElementById('dash-collisions').textContent =
-    collisionsPerSecond.toLocaleString('de-DE', { maximumFractionDigits: 1 });
-
+    state.colPerSec.toLocaleString('de-DE', { maximumFractionDigits: 1 });
   document.getElementById('dash-collisions-max').textContent =
     collisionMax.toLocaleString('de-DE', { maximumFractionDigits: 1 });
-
   document.getElementById('dash-collisions-avg').textContent =
-    average.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+    collisionAverage.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  document.getElementById('dash-n').textContent = objects.length;
 
-  document.getElementById('dash-n').textContent =
-    objects.length;
+  document.getElementById('dash-money').textContent =
+    state.moneyPerSec.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  document.getElementById('dash-money-max').textContent =
+    moneyMax.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  document.getElementById('dash-money-avg').textContent =
+    moneyAverage.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  document.getElementById('dash-global-mult').textContent =
+    getGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 });
 }
 
 /* Kugel abschießen */
@@ -1185,7 +1253,7 @@ function finishShot(event){
 
   if(distance < 4){
     const angle = Math.random() * Math.PI * 2;
-    const speed = (2 + Math.random() * 3) * getLaunchPowerMultiplier() * getSpeedMultiplier();
+    const speed = (2 + Math.random() * 3) * getLaunchPowerMultiplier();
 
     objects.push(
       mkBall(
@@ -1200,8 +1268,7 @@ function finishShot(event){
     const speed =
       clamped / MAX_DRAG *
       14 *
-      getLaunchPowerMultiplier() *
-      getSpeedMultiplier();
+      getLaunchPowerMultiplier();
 
     objects.push(
       mkBall(
@@ -1361,6 +1428,7 @@ function onCollision(x, y){
   earnedCoins = Math.ceil(earnedCoins);
 
   state.coins += earnedCoins;
+  state.moneyCount += earnedCoins;
 
   spawnFloat(x, y, earnedCoins);
   updateUI();
@@ -1519,7 +1587,7 @@ function drawFrame(){
     drawBall(ball);
   }
 
-  drawCollisionGraph(state.colPerSec);
+  drawDashboard();
 }
 
 function updateCollisionRate(now){
@@ -1537,7 +1605,15 @@ function updateCollisionRate(now){
       10
     ) / 10;
 
+  state.moneyPerSec =
+    Math.round(
+      state.moneyCount /
+      elapsed *
+      10
+    ) / 10;
+
   state.colCount = 0;
+  state.moneyCount = 0;
   state.lastColT = now;
 
   document.getElementById('col-val').textContent =
@@ -1676,7 +1752,7 @@ setInterval(() => {
   updateCollisionRate(now);
   lastBackgroundTime = now;
   lastTime = now;
-  drawCollisionGraph(state.colPerSec);
+  drawDashboard();
 }, 1000);
 
 document.addEventListener('visibilitychange', () => {
@@ -1783,12 +1859,6 @@ function updateButtons(){
   );
 
   updateUpgradeButton(
-    'speed',
-    'btn-speed',
-    'cost-speed'
-  );
-
-  updateUpgradeButton(
     'mult',
     'btn-mult',
     'cost-mult'
@@ -1811,6 +1881,60 @@ function updateButtons(){
     'btn-launch',
     'cost-launch'
   );
+
+  const prestigeButton = document.getElementById('btn-prestige');
+  const prestigeCostElement = document.getElementById('cost-prestige');
+  const prestigeCost = getPrestigeCost();
+
+  prestigeButton.disabled = coins < prestigeCost;
+  prestigeButton.className =
+    'upgrade-btn' + (coins >= prestigeCost ? ' can-afford' : '');
+  prestigeCostElement.textContent =
+    prestigeCost.toLocaleString('de-DE') +
+    ` 🪙 → Global x${getNextGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 })}`;
+}
+
+function getPrestigeCost(){
+  return 5000000;
+}
+
+function getNextGlobalMoneyMult(){
+  return 1 + ((state.prestige || 0) + 1) * 0.35;
+}
+
+function performPrestige(){
+  if(state.coins < getPrestigeCost()){
+    return;
+  }
+
+  state.prestige = (state.prestige || 0) + 1;
+  state.coins = 0;
+  state.colPerSec = 0;
+  state.moneyPerSec = 0;
+  state.colCount = 0;
+  state.moneyCount = 0;
+  state.comboCount = 0;
+  state.lastComboT = 0;
+
+  for(const key of Object.keys(upgrades)){
+    upgrades[key] = 0;
+  }
+
+  objects = [];
+  objectIndex = 0;
+  hueIdx = 0;
+  collisionMax = 0;
+  collisionSum = 0;
+  collisionSamples = 0;
+  collisionHistory.fill(0);
+  moneyMax = 0;
+  moneySum = 0;
+  moneySamples = 0;
+  moneyHistory.fill(0);
+
+  updateUI();
+  updateHintMsg();
+  saveGame();
 }
 
 function buy(cost, action){
@@ -1848,23 +1972,6 @@ document
 
     buy(cost, () => {
       upgrades.size++;
-      resizeBallsToCurrentArena();
-    });
-  });
-
-document
-  .getElementById('btn-speed')
-  .addEventListener('click', () => {
-    const level = upgrades.speed;
-    const cost = getCost('speed', level);
-
-    buy(cost, () => {
-      upgrades.speed++;
-
-      for(const ball of objects){
-        ball.vx *= 1.1;
-        ball.vy *= 1.1;
-      }
     });
   });
 
@@ -1911,6 +2018,14 @@ document
     buy(cost, () => {
       upgrades.launch++;
     });
+  });
+
+document
+  .getElementById('btn-prestige')
+  .addEventListener('click', () => {
+    if(confirm('Prestige durchführen? Dein aktueller Run wird zurückgesetzt, aber der globale Geld-Multiplikator steigt permanent.')){
+      performPrestige();
+    }
   });
 
 document
