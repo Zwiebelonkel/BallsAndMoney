@@ -232,7 +232,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function getArenaScale(ballCount = objects.length){
-      return 1 + Math.floor(ballCount / 6) * 0.35;
+      return 1 + Math.floor(ballCount / 8) * 0.18;
     }
 
     function getBaseR(ballCount = objects.length){
@@ -310,7 +310,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           m: ball.m,
           col: ball.col,
           active: ball.active !== false,
-          collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0
+          collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
+          imageSrc: typeof ball.imageSrc === 'string' ? ball.imageSrc : ''
         }))
       };
     }
@@ -376,6 +377,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
               col: ball.col || COLORS[hueIdx % COLORS.length],
               active: ball.active !== false,
               collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
+              imageSrc: typeof ball.imageSrc === 'string' ? ball.imageSrc : '',
+              image: null,
               trail: []
             }));
 
@@ -449,6 +452,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         col,
         active: true,
         collisions: 0,
+        imageSrc: '',
+        image: null,
         trail: []
       };
     }
@@ -982,8 +987,25 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         Math.PI * 2
       );
 
-      ctx.fillStyle = color + 'dd';
-      ctx.fill();
+      if(ball.imageSrc){
+        ensureBallImageLoaded(ball);
+      }
+
+      if(ball.image && ball.image.complete && ball.image.naturalWidth > 0){
+        ctx.save();
+        ctx.clip();
+        ctx.drawImage(
+          ball.image,
+          ball.x - ball.r,
+          ball.y - ball.r,
+          ball.r * 2,
+          ball.r * 2
+        );
+        ctx.restore();
+      } else {
+        ctx.fillStyle = color + 'dd';
+        ctx.fill();
+      }
 
       if(preferences.colorMode === 'mono'){
         ctx.restore();
@@ -1341,9 +1363,15 @@ export class AppComponent implements AfterViewInit, OnDestroy {
               <input class="ball-color-input" type="color" value="${ball.col}" data-ball-id="${ball.id}" aria-label="Farbe von Ball Nr. ${ballNumber}">
               <div class="ball-info">
                 <div class="ball-title">Ball Nr. ${ballNumber}</div>
-                <div class="ball-meta">Größe ${formatBallSize(ball)} · Kollisionen ${formatCompactNumber(ball.collisions || 0)}</div>
+                <div class="ball-meta">Größe ${formatBallSize(ball)} · Kollisionen ${formatCompactNumber(ball.collisions || 0)}${ball.imageSrc ? ' · Bild aktiv' : ''}</div>
               </div>
-              <button class="ball-toggle" type="button" data-ball-id="${ball.id}" aria-pressed="${isActive}">${statusLabel}</button>
+              <div class="ball-actions">
+                <label class="ball-image">
+                  Bild
+                  <input class="ball-image-input" type="file" accept="image/*" data-ball-id="${ball.id}" aria-label="Bild für Ball Nr. ${ballNumber} laden">
+                </label>
+                <button class="ball-toggle" type="button" data-ball-id="${ball.id}" aria-pressed="${isActive}">${statusLabel}</button>
+              </div>
             </div>
           `;
         })
@@ -1363,6 +1391,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       queueSave();
     }
 
+    function ensureBallImageLoaded(ball){
+      if(!ball.imageSrc || (ball.image && ball.image.dataset.src === ball.imageSrc)){
+        return;
+      }
+
+      const image = new Image();
+      image.dataset.src = ball.imageSrc;
+      image.src = ball.imageSrc;
+      ball.image = image;
+    }
+
     function setBallColor(ballId, color){
       const ball = objects.find(item => item.id === ballId);
 
@@ -1371,6 +1410,20 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
 
       ball.col = color;
+      ballsPanelDirty = true;
+      renderBallsPanel(true);
+      queueSave();
+    }
+
+    function setBallImage(ballId, imageSrc){
+      const ball = objects.find(item => item.id === ballId);
+
+      if(!ball){
+        return;
+      }
+
+      ball.imageSrc = imageSrc;
+      ball.image = null;
       ballsPanelDirty = true;
       renderBallsPanel(true);
       queueSave();
@@ -1735,11 +1788,30 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .addEventListener('change', event => {
         const target = event.target as HTMLInputElement;
 
-        if(!target.matches('.ball-color-input')){
+        if(target.matches('.ball-color-input')){
+          setBallColor(Number(target.dataset['ballId']), target.value);
           return;
         }
 
-        setBallColor(Number(target.dataset['ballId']), target.value);
+        if(!target.matches('.ball-image-input') || !target.files || target.files.length === 0){
+          return;
+        }
+
+        const file = target.files[0];
+
+        if(!file.type.startsWith('image/')){
+          target.value = '';
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+          if(typeof reader.result === 'string'){
+            setBallImage(Number(target.dataset['ballId']), reader.result);
+          }
+        });
+        reader.readAsDataURL(file);
+        target.value = '';
       });
 
     document
