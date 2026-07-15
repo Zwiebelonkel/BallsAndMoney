@@ -5,7 +5,10 @@ const port = Number(process.env.PORT || 3000);
 const allowedOrigin = process.env.CORS_ORIGIN || '*';
 
 
-const databaseUrl = (process.env.TURSO_DATABASE_URL || '').replace('libsql://', 'https://');
+const rawDatabaseUrl = process.env.TURSO_DATABASE_URL || '';
+const databaseUrl = rawDatabaseUrl
+  .replace(/^libsql:\/\//, 'https://')
+  .replace(/\/+$/, '');
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
 function toTursoValue(value){
