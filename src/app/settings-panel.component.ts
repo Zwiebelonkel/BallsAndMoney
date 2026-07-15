@@ -38,6 +38,16 @@ import { AdminPanelComponent } from './admin-panel.component';
           <span class="setting-value" id="graph-val">Sichtbar</span>
         </button>
 
+        <button class="setting-btn" id="btn-ball-trails" type="button">
+          Ball-Traverse umschalten
+          <span class="setting-value" id="ball-trails-val">Aktiv</span>
+        </button>
+
+        <button class="setting-btn" id="btn-money-popups" type="button">
+          Geld-Zahlen umschalten
+          <span class="setting-value" id="money-popups-val">Aktiv</span>
+        </button>
+
         <app-admin-panel></app-admin-panel>
 
         <button class="setting-btn danger" id="btn-reset" type="button">
