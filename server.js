@@ -30,13 +30,15 @@ function fromTursoValue(value){
 
 async function execute(sql, args = []){
   if(!databaseUrl || !authToken){
-    throw new Error('TURSO_DATABASE_URL und TURSO_AUTH_TOKEN müssen gesetzt sein.');
+    throw new Error(
+      'TURSO_DATABASE_URL oder TURSO_AUTH_TOKEN fehlt.'
+    );
   }
 
   const response = await fetch(`${databaseUrl}/v2/pipeline`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${authToken}`,
+      Authorization: `Bearer ${authToken}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -48,23 +50,62 @@ async function execute(sql, args = []){
             args: args.map(toTursoValue)
           }
         },
-        { type: 'close' }
+        {
+          type: 'close'
+        }
       ]
     })
   });
-  const data = await response.json();
 
-  if(!response.ok || data.results?.[0]?.type !== 'ok'){
-    throw new Error(data.error?.message || data.results?.[0]?.error?.message || 'Turso-Abfrage fehlgeschlagen.');
+  const responseText = await response.text();
+
+  let data;
+
+  try{
+    data = JSON.parse(responseText);
+  } catch{
+    throw new Error(
+      `Turso lieferte keine gültige JSON-Antwort. HTTP ${response.status}: ${responseText}`
+    );
   }
 
-  const result = data.results[0].response.result;
+  const firstResult = data.results?.[0];
+
+  if(!response.ok || firstResult?.type !== 'ok'){
+    console.error('Turso HTTP-Status:', response.status);
+    console.error('Turso-Antwort:', JSON.stringify(data, null, 2));
+
+    const errorMessage =
+      firstResult?.error?.message ||
+      firstResult?.error ||
+      data.error?.message ||
+      data.error ||
+      responseText;
+
+    throw new Error(
+      `Turso-Abfrage fehlgeschlagen – HTTP ${response.status}: ${errorMessage}`
+    );
+  }
+
+  const result = firstResult.response?.result;
+
+  if(!result){
+    throw new Error(
+      `Turso-Antwort enthält kein Abfrageergebnis: ${responseText}`
+    );
+  }
+
   const columns = (result.cols || []).map(column => column.name);
 
   return {
-    rows: (result.rows || []).map(row => Object.fromEntries(
-      row.map((value, index) => [columns[index], fromTursoValue(value)])
-    ))
+    rows: (result.rows || []).map(row =>
+      Object.fromEntries(
+        row.map((value, index) => [
+          columns[index],
+          fromTursoValue(value)
+        ])
+      )
+    )
   };
 }
 
