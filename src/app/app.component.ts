@@ -1,11 +1,12 @@
 import { AfterViewInit, Component, OnDestroy } from '@angular/core';
 import { PrestigePanelComponent } from './prestige-panel.component';
 import { SettingsPanelComponent } from './settings-panel.component';
+import { BallsPanelComponent } from './balls-panel.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [PrestigePanelComponent, SettingsPanelComponent],
+  imports: [PrestigePanelComponent, SettingsPanelComponent, BallsPanelComponent],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
@@ -32,6 +33,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let W = 0;
     let H = 0;
     let objects = [];
+    let ballsPanelDirty = true;
 
     const MAX_DEVICE_PIXEL_RATIO = 2;
 
@@ -283,7 +285,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           vy: ball.vy,
           r: ball.r,
           m: ball.m,
-          col: ball.col
+          col: ball.col,
+          active: ball.active !== false,
+          collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0
         }))
       };
     }
@@ -347,6 +351,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
               r: Number.isFinite(ball.r) ? ball.r : getBaseR(),
               m: Number.isFinite(ball.m) ? ball.m : getBaseR() * getBaseR() * 0.01,
               col: ball.col || COLORS[hueIdx % COLORS.length],
+              active: ball.active !== false,
+              collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
               trail: []
             }));
 
@@ -383,6 +389,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       preferences.colorMode = 'color';
       preferences.graphVisible = true;
       objects = [];
+      ballsPanelDirty = true;
       objectIndex = 0;
       hueIdx = 0;
       collisionMax = 0;
@@ -417,6 +424,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         r,
         m: mass,
         col,
+        active: true,
+        collisions: 0,
         trail: []
       };
     }
@@ -658,6 +667,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         resizeBallsToCurrentArena();
       }
 
+      ballsPanelDirty = true;
       updateHintMsg();
       queueSave();
     }
@@ -701,6 +711,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
           const a = objects[i];
           const b = objects[j];
+
+          if(a.active === false || b.active === false){
+            continue;
+          }
 
           const dx = b.x - a.x;
           const dy = b.y - a.y;
@@ -748,6 +762,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
           b.vx += impulse / b.m * nx;
           b.vy += impulse / b.m * ny;
+
+          a.collisions++;
+          b.collisions++;
+          ballsPanelDirty = true;
 
           onCollision(
             (a.x + b.x) / 2,
@@ -912,6 +930,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let lastBackgroundTime = lastTime;
     function simulateStep(delta, shouldDraw){
       for(const ball of objects){
+        if(ball.active === false){
+          continue;
+        }
+
         ball.x += ball.vx * delta;
         ball.y += ball.vy * delta;
 
@@ -958,7 +980,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       drawGrid();
 
       for(const ball of objects){
-        drawBall(ball);
+        if(ball.active !== false){
+          drawBall(ball);
+        }
       }
 
       drawDashboard();
@@ -1145,11 +1169,76 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     /* UI */
 
+    function formatBallSize(ball){
+      return (ball.r * 2).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+    }
+
+    function renderBallsPanel(force = false){
+      if(!force && !ballsPanelDirty){
+        return;
+      }
+
+      const list = document.getElementById('balls-list');
+      const summary = document.getElementById('balls-summary');
+      const toggleValue = document.getElementById('balls-toggle-value');
+      const activeCount = objects.filter(ball => ball.active !== false).length;
+
+      toggleValue.textContent =
+        `${activeCount}/${objects.length} aktiv`;
+
+      if(objects.length === 0){
+        summary.textContent = 'Keine Kugeln vorhanden.';
+        list.innerHTML = '';
+        ballsPanelDirty = false;
+        return;
+      }
+
+      summary.textContent =
+        `${objects.length} Kugeln · ${activeCount} aktiv · ${objects.length - activeCount} deaktiviert`;
+
+      list.innerHTML = objects
+        .map((ball, index) => {
+          const ballNumber = index + 1;
+          const isActive = ball.active !== false;
+          const statusLabel = isActive ? 'Deaktivieren' : 'Aktivieren';
+          const statusClass = isActive ? 'is-active' : 'is-inactive';
+
+          return `
+            <div class="ball-row ${statusClass}" role="listitem">
+              <div class="ball-color" style="background:${ball.col}" aria-hidden="true"></div>
+              <div class="ball-info">
+                <div class="ball-title">Ball Nr. ${ballNumber}</div>
+                <div class="ball-meta">Größe ${formatBallSize(ball)} · Farbe ${ball.col} · Kollisionen ${ball.collisions || 0}</div>
+              </div>
+              <button class="ball-toggle" type="button" data-ball-id="${ball.id}" aria-pressed="${isActive}">${statusLabel}</button>
+            </div>
+          `;
+        })
+        .join('');
+
+      ballsPanelDirty = false;
+    }
+
+    function toggleBallActive(ballId){
+      const ball = objects.find(item => item.id === ballId);
+
+      if(!ball){
+        return;
+      }
+
+      ball.active = ball.active === false;
+      ball.trail = [];
+      ballsPanelDirty = true;
+      renderBallsPanel(true);
+      queueSave();
+    }
+
     function updateUI(){
       document.getElementById('coins-val').textContent =
         Math.floor(state.coins).toLocaleString('de-DE');
 
       updateButtons();
+      renderBallsPanel();
       queueSave();
     }
 
@@ -1280,6 +1369,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
 
       objects = [];
+      ballsPanelDirty = true;
       objectIndex = 0;
       hueIdx = 0;
       collisionMax = 0;
@@ -1405,7 +1495,20 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     const closePrestigePanel = bindSlidePanel('btn-prestige', 'prestige-panel', 'btn-prestige-close');
     const closeSettingsPanel = bindSlidePanel('btn-settings-toggle', 'settings-panel', 'btn-settings-close');
+    bindSlidePanel('btn-balls-toggle', 'balls-panel', 'btn-balls-close');
     bindSlidePanel('btn-admin-toggle', 'admin-panel', 'btn-admin-close');
+
+    document
+      .getElementById('balls-list')
+      .addEventListener('click', event => {
+        const target = event.target as HTMLElement;
+
+        if(!target.matches('.ball-toggle')){
+          return;
+        }
+
+        toggleBallActive(Number(target.dataset['ballId']));
+      });
 
     document
       .getElementById('btn-prestige-confirm')
@@ -1514,6 +1617,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     applyPreferences();
     updateUI();
     updateHintMsg();
+    renderBallsPanel(true);
 
   }
 }
