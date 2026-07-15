@@ -1563,7 +1563,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
 
     const LEADERBOARD_PLAYER_KEY = 'ballsAndMoneyLeaderboardPlayer';
-    const LEADERBOARD_API_BASE = (window as any).BALLS_AND_MONEY_API_BASE || '';
+    const LEADERBOARD_API_BASE = 'https://ballsandmoney.onrender.com';
     let leaderboardPlayer = loadLeaderboardPlayer();
     let leaderboardBusy = false;
 
