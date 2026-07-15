@@ -33,6 +33,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let W = 0;
     let H = 0;
     let objects = [];
+    let replacementBalls = [];
     let ballsPanelDirty = true;
 
     const MAX_DEVICE_PIXEL_RATIO = 2;
@@ -300,6 +301,15 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         },
         hueIdx,
         objectIndex,
+        replacementBalls: replacementBalls.map(ball => ({
+          id: ball.id,
+          r: ball.r,
+          m: ball.m,
+          col: ball.col,
+          maxSpeed: ball.maxSpeed,
+          collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
+          imageSrc: typeof ball.imageSrc === 'string' ? ball.imageSrc : ''
+        })),
         objects: objects.map(ball => ({
           id: ball.id,
           x: ball.x,
@@ -310,6 +320,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           m: ball.m,
           col: ball.col,
           active: ball.active !== false,
+          maxSpeed: Number.isFinite(ball.maxSpeed) ? ball.maxSpeed : Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy),
           collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
           imageSrc: typeof ball.imageSrc === 'string' ? ball.imageSrc : ''
         }))
@@ -378,6 +389,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
               active: ball.active !== false,
               collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
               imageSrc: typeof ball.imageSrc === 'string' ? ball.imageSrc : '',
+              maxSpeed: Number.isFinite(ball.maxSpeed) ? ball.maxSpeed : Math.sqrt((Number.isFinite(ball.vx) ? ball.vx : 0) ** 2 + (Number.isFinite(ball.vy) ? ball.vy : 0) ** 2),
               image: null,
               trail: []
             }));
@@ -386,6 +398,30 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x));
             ball.y = Math.max(ball.r, Math.min(H - ball.r, ball.y));
           }
+        }
+
+
+        if(Array.isArray(data.replacementBalls)){
+          replacementBalls = data.replacementBalls
+            .filter(ball => Number.isFinite(ball.r))
+            .map(ball => ({
+              id: Number.isFinite(ball.id) ? ball.id : objectIndex++,
+              r: ball.r,
+              m: Number.isFinite(ball.m) ? ball.m : ball.r * ball.r * 0.01,
+              col: ball.col || COLORS[hueIdx % COLORS.length],
+              maxSpeed: Number.isFinite(ball.maxSpeed) ? ball.maxSpeed : 0,
+              collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
+              imageSrc: typeof ball.imageSrc === 'string' ? ball.imageSrc : '',
+              image: null
+            }));
+        }
+
+        const inactiveLoadedBalls = objects.filter(ball => ball.active === false);
+
+        if(inactiveLoadedBalls.length > 0){
+          replacementBalls.push(...inactiveLoadedBalls.map(createReplacementBall));
+          objects = objects.filter(ball => ball.active !== false);
+          ballsPanelDirty = true;
         }
 
         return true;
@@ -415,6 +451,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       preferences.colorMode = 'color';
       preferences.graphVisible = true;
       objects = [];
+      replacementBalls = [];
       ballsPanelDirty = true;
       objectIndex = 0;
       hueIdx = 0;
@@ -433,16 +470,28 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       saveGame();
     }
 
-    function mkBall(x, y, vx = 0, vy = 0){
-      const r = getBaseR() * (0.85 + Math.random() * 0.3);
-      const col = COLORS[hueIdx % COLORS.length];
+    function mkBall(x, y, vx = 0, vy = 0, template = null){
+      const r = template ? template.r : getBaseR() * (0.85 + Math.random() * 0.3);
+      const col = template ? template.col : COLORS[hueIdx % COLORS.length];
 
-      hueIdx++;
+      if(!template){
+        hueIdx++;
+      }
 
-      const mass = r * r * 0.01;
+      const maxSpeed = template && Number.isFinite(template.maxSpeed)
+        ? template.maxSpeed
+        : Math.sqrt(vx * vx + vy * vy);
+      const speed = Math.sqrt(vx * vx + vy * vy);
+
+      if(maxSpeed > 0 && speed > maxSpeed){
+        vx = vx / speed * maxSpeed;
+        vy = vy / speed * maxSpeed;
+      }
+
+      const mass = template && Number.isFinite(template.m) ? template.m : r * r * 0.01;
 
       return {
-        id: objectIndex++,
+        id: template && Number.isFinite(template.id) ? template.id : objectIndex++,
         x,
         y,
         vx,
@@ -451,8 +500,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         m: mass,
         col,
         active: true,
-        collisions: 0,
-        imageSrc: '',
+        maxSpeed,
+        collisions: template && Number.isFinite(template.collisions) ? template.collisions : 0,
+        imageSrc: template && typeof template.imageSrc === 'string' ? template.imageSrc : '',
         image: null,
         trail: []
       };
@@ -662,6 +712,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const distance = Math.sqrt(dx * dx + dy * dy);
       const previousArenaScale = getArenaScale();
 
+      const replacementTemplate = replacementBalls.shift() || null;
+
       if(distance < 4){
         const angle = Math.random() * Math.PI * 2;
         const speed = (2 + Math.random() * 3) * getLaunchPowerMultiplier();
@@ -671,7 +723,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             drag.startX,
             drag.startY,
             Math.cos(angle) * speed,
-            Math.sin(angle) * speed
+            Math.sin(angle) * speed,
+            replacementTemplate
           )
         );
       } else {
@@ -686,12 +739,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             drag.startX,
             drag.startY,
             dx / distance * speed,
-            dy / distance * speed
+            dy / distance * speed,
+            replacementTemplate
           )
         );
       }
 
-      if(getArenaScale() !== previousArenaScale){
+      if(!replacementTemplate && getArenaScale() !== previousArenaScale){
         resizeBallsToCurrentArena();
       }
 
@@ -1321,41 +1375,41 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const toggleValue = document.getElementById('balls-toggle-value');
       const bulkToggle = getElementById<HTMLButtonElement>('btn-balls-bulk-toggle');
       const bulkToggleValue = document.getElementById('balls-bulk-toggle-value');
-      const activeCount = objects.filter(ball => ball.active !== false).length;
+      const pendingReplacementCount = replacementBalls.length;
 
       toggleValue.textContent =
-        `${formatCompactNumber(activeCount)}/${formatCompactNumber(objects.length)} aktiv`;
+        pendingReplacementCount > 0
+          ? `${formatCompactNumber(pendingReplacementCount)} zum Neuschießen`
+          : `${formatCompactNumber(objects.length)} Kugeln`;
 
       if(objects.length === 0){
-        summary.textContent = 'Keine Kugeln vorhanden.';
+        summary.textContent = pendingReplacementCount > 0
+          ? `${formatCompactNumber(pendingReplacementCount)} ersetzte Kugeln warten in Reihenfolge aufs Neuschießen.`
+          : 'Keine Kugeln vorhanden.';
         list.innerHTML = '';
         bulkToggle.disabled = true;
-        bulkToggle.textContent = 'Alle Kugeln deaktivieren';
+        bulkToggle.textContent = 'Alle Kugeln ersetzen';
         bulkToggle.appendChild(bulkToggleValue);
-        bulkToggleValue.textContent = 'Keine Kugeln';
+        bulkToggleValue.textContent = pendingReplacementCount > 0
+          ? 'Alle warten'
+          : 'Keine Kugeln';
         ballsPanelDirty = false;
         return;
       }
 
       summary.textContent =
-        `${formatCompactNumber(objects.length)} Kugeln · ${formatCompactNumber(activeCount)} aktiv · ${formatCompactNumber(objects.length - activeCount)} deaktiviert`;
+        `${formatCompactNumber(objects.length)} Kugeln im Feld · ${formatCompactNumber(pendingReplacementCount)} zum Neuschießen`;
 
-      const shouldActivateAll = activeCount < objects.length;
       bulkToggle.disabled = false;
-      bulkToggle.textContent = shouldActivateAll
-        ? 'Alle Kugeln aktivieren'
-        : 'Alle Kugeln deaktivieren';
+      bulkToggle.textContent = 'Alle Kugeln ersetzen';
       bulkToggle.appendChild(bulkToggleValue);
-      bulkToggleValue.textContent = shouldActivateAll
-        ? `${formatCompactNumber(objects.length - activeCount)} deaktiviert`
-        : `${formatCompactNumber(activeCount)} aktiv`;
+      bulkToggleValue.textContent = `${formatCompactNumber(objects.length)} im Feld`;
 
       list.innerHTML = objects
         .map((ball, index) => {
           const ballNumber = index + 1;
-          const isActive = ball.active !== false;
-          const statusLabel = isActive ? 'Deaktivieren' : 'Aktivieren';
-          const statusClass = isActive ? 'is-active' : 'is-inactive';
+          const statusLabel = 'Ersetzen';
+          const statusClass = 'is-active';
 
           return `
             <div class="ball-row ${statusClass}" role="listitem">
@@ -1370,7 +1424,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                   Bild
                   <input class="ball-image-input" type="file" accept="image/*" data-ball-id="${ball.id}" aria-label="Bild für Ball Nr. ${ballNumber} laden">
                 </label>
-                <button class="ball-toggle" type="button" data-ball-id="${ball.id}" aria-pressed="${isActive}">${statusLabel}</button>
+                <button class="ball-toggle" type="button" data-ball-id="${ball.id}">${statusLabel}</button>
               </div>
             </div>
           `;
@@ -1380,13 +1434,27 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       ballsPanelDirty = false;
     }
 
-    function setAllBallsActive(isActive){
-      for(const ball of objects){
-        ball.active = isActive;
-        ball.trail = [];
-      }
+    function createReplacementBall(ball){
+      return {
+        id: ball.id,
+        r: ball.r,
+        m: ball.m,
+        col: ball.col,
+        maxSpeed: Number.isFinite(ball.maxSpeed)
+          ? ball.maxSpeed
+          : Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy),
+        collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
+        imageSrc: typeof ball.imageSrc === 'string' ? ball.imageSrc : '',
+        image: null
+      };
+    }
+
+    function replaceAllBalls(){
+      replacementBalls.push(...objects.map(createReplacementBall));
+      objects = [];
 
       ballsPanelDirty = true;
+      updateHintMsg();
       renderBallsPanel(true);
       queueSave();
     }
@@ -1429,16 +1497,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       queueSave();
     }
 
-    function toggleBallActive(ballId){
-      const ball = objects.find(item => item.id === ballId);
+    function replaceBall(ballId){
+      const ballIndex = objects.findIndex(item => item.id === ballId);
 
-      if(!ball){
+      if(ballIndex < 0){
         return;
       }
 
-      ball.active = ball.active === false;
-      ball.trail = [];
+      const [ball] = objects.splice(ballIndex, 1);
+      replacementBalls.push(createReplacementBall(ball));
       ballsPanelDirty = true;
+      updateHintMsg();
       renderBallsPanel(true);
       queueSave();
     }
@@ -1585,6 +1654,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
 
       objects = [];
+      replacementBalls = [];
       ballsPanelDirty = true;
       objectIndex = 0;
       hueIdx = 0;
@@ -1761,8 +1831,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     document
       .getElementById('btn-balls-bulk-toggle')
       .addEventListener('click', () => {
-        const activeCount = objects.filter(ball => ball.active !== false).length;
-        setAllBallsActive(activeCount < objects.length);
+        replaceAllBalls();
       });
 
     document
@@ -1780,7 +1849,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           return;
         }
 
-        toggleBallActive(Number(target.dataset['ballId']));
+        replaceBall(Number(target.dataset['ballId']));
       });
 
     document
@@ -1909,6 +1978,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       if(current >= maximum){
         hint.textContent =
           'Max. Kugeln erreicht – Kapazität kaufen!';
+      } else if(replacementBalls.length > 0){
+        hint.textContent =
+          `${formatCompactNumber(replacementBalls.length)} ersetzte Kugeln warten · Drag/Touch → in gleicher Reihenfolge neu schießen`;
       } else {
         hint.textContent =
           `Drag/Touch → schießen · Tipp/Klick = zufällig (${formatCompactNumber(current)}/${formatCompactNumber(maximum)})`;
