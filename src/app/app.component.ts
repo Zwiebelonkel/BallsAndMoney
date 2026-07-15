@@ -197,6 +197,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       launch: {
         baseCost: 110,
         growth: 2.15
+      },
+      border: {
+        baseCost: 25000,
+        growth: 8,
+        maxLevel: 4
       }
     };
 
@@ -205,7 +210,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       mult: 0,
       cap: 0,
       combo: 0,
-      launch: 0
+      launch: 0,
+      border: 0
     };
 
     function getCost(key, level){
@@ -213,6 +219,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       if(config === undefined){
         console.error(`Kein Preis für Upgrade "${key}" definiert.`);
+        return Infinity;
+      }
+
+      if(Number.isFinite(config.maxLevel) && level >= config.maxLevel){
         return Infinity;
       }
 
@@ -257,6 +267,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     function getLaunchPowerMultiplier(){
       return 0.55 * Math.pow(1.18, upgrades.launch);
+    }
+
+    const BORDER_SIDES = [
+      { key: 'top', color: '#FAC775' },
+      { key: 'right', color: '#9FE1CB' },
+      { key: 'bottom', color: '#D4537E' },
+      { key: 'left', color: '#4a8fd4' }
+    ];
+
+    function isBorderSideActive(side){
+      return BORDER_SIDES
+        .slice(0, upgrades.border)
+        .some(borderSide => borderSide.key === side);
     }
 
     let objectIndex = 0;
@@ -684,24 +707,38 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     /* Physik */
 
     function wallBounce(ball){
+      const borderHits = [];
+
       if(ball.x - ball.r < 0){
         ball.x = ball.r;
         ball.vx = Math.abs(ball.vx);
+        borderHits.push({ side: 'left', x: ball.r, y: ball.y });
       }
 
       if(ball.x + ball.r > W){
         ball.x = W - ball.r;
         ball.vx = -Math.abs(ball.vx);
+        borderHits.push({ side: 'right', x: W - ball.r, y: ball.y });
       }
 
       if(ball.y - ball.r < 0){
         ball.y = ball.r;
         ball.vy = Math.abs(ball.vy);
+        borderHits.push({ side: 'top', x: ball.x, y: ball.r });
       }
 
       if(ball.y + ball.r > H){
         ball.y = H - ball.r;
         ball.vy = -Math.abs(ball.vy);
+        borderHits.push({ side: 'bottom', x: ball.x, y: H - ball.r });
+      }
+
+      for(const hit of borderHits){
+        if(isBorderSideActive(hit.side)){
+          ball.collisions++;
+          ballsPanelDirty = true;
+          onCollision(hit.x, hit.y);
+        }
       }
     }
 
@@ -866,6 +903,43 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
     }
 
+    function drawBorders(){
+      const activeSides = BORDER_SIDES.slice(0, upgrades.border);
+
+      if(activeSides.length === 0){
+        return;
+      }
+
+      ctx.save();
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'butt';
+
+      for(const side of activeSides){
+        ctx.strokeStyle = preferences.colorMode === 'mono'
+          ? getMonoSoftColor(0.48)
+          : side.color;
+        ctx.beginPath();
+
+        if(side.key === 'top'){
+          ctx.moveTo(0, 4);
+          ctx.lineTo(W, 4);
+        } else if(side.key === 'right'){
+          ctx.moveTo(W - 4, 0);
+          ctx.lineTo(W - 4, H);
+        } else if(side.key === 'bottom'){
+          ctx.moveTo(W, H - 4);
+          ctx.lineTo(0, H - 4);
+        } else {
+          ctx.moveTo(4, H);
+          ctx.lineTo(4, 0);
+        }
+
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
     function drawBall(ball){
       if(ball.trail.length > 1){
         ctx.beginPath();
@@ -887,6 +961,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         ctx.lineCap = 'butt';
       }
 
+      const color = displayColor(ball.col);
+
+      if(preferences.colorMode === 'mono'){
+        ctx.save();
+        ctx.shadowColor = preferences.theme === 'light'
+          ? 'rgba(0,0,0,0.22)'
+          : 'rgba(255,255,255,0.18)';
+        ctx.shadowBlur = ball.r * 0.7;
+        ctx.shadowOffsetX = preferences.theme === 'light' ? 1.5 : 0;
+        ctx.shadowOffsetY = preferences.theme === 'light' ? 2 : 0;
+      }
+
       ctx.beginPath();
       ctx.arc(
         ball.x,
@@ -896,10 +982,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         Math.PI * 2
       );
 
-      const color = displayColor(ball.col);
-
       ctx.fillStyle = color + 'dd';
       ctx.fill();
+
+      if(preferences.colorMode === 'mono'){
+        ctx.restore();
+      }
 
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.2;
@@ -978,6 +1066,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       ctx.fillRect(0, 0, W, H);
 
       drawGrid();
+      drawBorders();
 
       for(const ball of objects){
         if(ball.active !== false){
@@ -1350,6 +1439,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         'cost-launch'
       );
 
+      updateUpgradeButton(
+        'border',
+        'btn-border',
+        'cost-border'
+      );
+
       const prestigeButton = getElementById<HTMLButtonElement>('btn-prestige');
       const prestigeCostElement = document.getElementById('cost-prestige');
       const prestigeCost = getPrestigeCost();
@@ -1505,6 +1600,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         buy(cost, () => {
           upgrades.launch++;
+        });
+      });
+
+    document
+      .getElementById('btn-border')
+      .addEventListener('click', () => {
+        const level = upgrades.border;
+        const cost = getCost('border', level);
+
+        buy(cost, () => {
+          upgrades.border++;
         });
       });
 
