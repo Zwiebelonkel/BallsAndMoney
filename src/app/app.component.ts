@@ -2,11 +2,12 @@ import { AfterViewInit, Component, OnDestroy } from '@angular/core';
 import { PrestigePanelComponent } from './prestige-panel.component';
 import { SettingsPanelComponent } from './settings-panel.component';
 import { BallsPanelComponent } from './balls-panel.component';
+import { LeaderboardPanelComponent } from './leaderboard-panel.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [PrestigePanelComponent, SettingsPanelComponent, BallsPanelComponent],
+  imports: [PrestigePanelComponent, SettingsPanelComponent, BallsPanelComponent, LeaderboardPanelComponent],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
@@ -1560,6 +1561,185 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       queueSave();
     }
 
+
+    const LEADERBOARD_PLAYER_KEY = 'ballsAndMoneyLeaderboardPlayer';
+    const LEADERBOARD_API_BASE = (window as any).BALLS_AND_MONEY_API_BASE || '';
+    let leaderboardPlayer = loadLeaderboardPlayer();
+    let leaderboardBusy = false;
+
+    function getLeaderboardUrl(path){
+      return `${LEADERBOARD_API_BASE}/api/leaderboard${path}`;
+    }
+
+    function loadLeaderboardPlayer(){
+      try{
+        const raw = localStorage.getItem(LEADERBOARD_PLAYER_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch(error){
+        localStorage.removeItem(LEADERBOARD_PLAYER_KEY);
+        return null;
+      }
+    }
+
+    function saveLeaderboardPlayer(player){
+      leaderboardPlayer = player;
+
+      if(player){
+        localStorage.setItem(LEADERBOARD_PLAYER_KEY, JSON.stringify(player));
+      } else {
+        localStorage.removeItem(LEADERBOARD_PLAYER_KEY);
+      }
+
+      updateLeaderboardAuthUI();
+    }
+
+    function getLeaderboardPayload(){
+      return {
+        prestige: Math.max(0, Math.floor(state.prestige || 0)),
+        money: Math.max(0, Math.floor(state.coins || 0)),
+        balls: Math.max(0, objects.length + replacementBalls.length)
+      };
+    }
+
+    function setLeaderboardMessage(message, isError = false){
+      const messageElement = document.getElementById('leaderboard-message');
+      messageElement.textContent = message;
+      messageElement.classList.toggle('is-error', isError);
+    }
+
+    function updateLeaderboardAuthUI(){
+      const isLoggedIn = Boolean(leaderboardPlayer?.id && leaderboardPlayer?.token);
+      const loginBox = getElementById<HTMLElement>('leaderboard-login');
+      const profileBox = getElementById<HTMLElement>('leaderboard-profile');
+      const playerName = document.getElementById('leaderboard-player-name');
+      const submitButton = getElementById<HTMLButtonElement>('btn-leaderboard-submit');
+      const status = document.getElementById('leaderboard-status');
+
+      loginBox.hidden = isLoggedIn;
+      profileBox.hidden = !isLoggedIn;
+      submitButton.disabled = !isLoggedIn || leaderboardBusy;
+      status.textContent = isLoggedIn ? `Angemeldet: ${leaderboardPlayer.name}` : 'Nicht angemeldet';
+      playerName.textContent = isLoggedIn ? leaderboardPlayer.name : '-';
+    }
+
+    function updateLeaderboardScoreUI(){
+      const score = getLeaderboardPayload();
+      document.getElementById('leaderboard-current-score').textContent =
+        `Prestige ${formatCompactNumber(score.prestige)} · ${formatCompactNumber(score.money)} 🪙 · ${formatCompactNumber(score.balls)} Kugeln`;
+      updateLeaderboardAuthUI();
+    }
+
+    function renderLeaderboard(entries){
+      const list = document.getElementById('leaderboard-list');
+
+      if(!Array.isArray(entries) || entries.length === 0){
+        list.innerHTML = '<div class="leaderboard-empty">Noch keine Scores vorhanden.</div>';
+        return;
+      }
+
+      list.innerHTML = entries.map(entry => `
+        <div class="leaderboard-row${leaderboardPlayer?.id === entry.playerId ? ' is-current' : ''}">
+          <div class="leaderboard-rank">#${entry.rank}</div>
+          <div class="leaderboard-entry-main">
+            <div class="leaderboard-entry-name"></div>
+            <div class="leaderboard-entry-meta">Prestige ${formatCompactNumber(entry.prestige)} · ${formatCompactNumber(entry.money)} 🪙 · ${formatCompactNumber(entry.balls)} Kugeln</div>
+          </div>
+        </div>
+      `).join('');
+
+      Array.from(list.querySelectorAll('.leaderboard-entry-name')).forEach((node, index) => {
+        node.textContent = entries[index].name;
+      });
+    }
+
+    async function refreshLeaderboard(){
+      try{
+        setLeaderboardMessage('Leaderboard wird geladen ...');
+        const response = await fetch(getLeaderboardUrl('?limit=25'));
+        const data = await response.json();
+
+        if(!response.ok){
+          throw new Error(data.error || 'Leaderboard konnte nicht geladen werden.');
+        }
+
+        renderLeaderboard(data.entries || []);
+        setLeaderboardMessage('Leaderboard aktualisiert.');
+      } catch(error){
+        setLeaderboardMessage(error instanceof Error ? error.message : 'Leaderboard konnte nicht geladen werden.', true);
+      }
+    }
+
+    async function loginLeaderboard(){
+      const input = getElementById<HTMLInputElement>('leaderboard-name-input');
+      const name = input.value.trim();
+
+      if(name.length < 2){
+        setLeaderboardMessage('Bitte gib mindestens 2 Zeichen ein.', true);
+        return;
+      }
+
+      try{
+        leaderboardBusy = true;
+        updateLeaderboardAuthUI();
+        setLeaderboardMessage('Anmeldung läuft ...');
+        const response = await fetch(getLeaderboardUrl('/login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        const data = await response.json();
+
+        if(!response.ok){
+          throw new Error(data.error || 'Anmeldung fehlgeschlagen.');
+        }
+
+        saveLeaderboardPlayer(data.player);
+        input.value = '';
+        setLeaderboardMessage('Angemeldet. Du kannst deinen Score senden.');
+        await submitLeaderboardScore();
+      } catch(error){
+        setLeaderboardMessage(error instanceof Error ? error.message : 'Anmeldung fehlgeschlagen.', true);
+      } finally {
+        leaderboardBusy = false;
+        updateLeaderboardAuthUI();
+      }
+    }
+
+    async function submitLeaderboardScore(){
+      if(!leaderboardPlayer?.id || !leaderboardPlayer?.token){
+        setLeaderboardMessage('Bitte zuerst anmelden.', true);
+        return;
+      }
+
+      try{
+        leaderboardBusy = true;
+        updateLeaderboardAuthUI();
+        setLeaderboardMessage('Score wird gesendet ...');
+        const response = await fetch(getLeaderboardUrl('/score'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerId: leaderboardPlayer.id,
+            token: leaderboardPlayer.token,
+            ...getLeaderboardPayload()
+          })
+        });
+        const data = await response.json();
+
+        if(!response.ok){
+          throw new Error(data.error || 'Score konnte nicht gespeichert werden.');
+        }
+
+        renderLeaderboard(data.entries || []);
+        setLeaderboardMessage('Score gespeichert.');
+      } catch(error){
+        setLeaderboardMessage(error instanceof Error ? error.message : 'Score konnte nicht gespeichert werden.', true);
+      } finally {
+        leaderboardBusy = false;
+        updateLeaderboardAuthUI();
+      }
+    }
+
     function updateCoinsUI(){
       document.getElementById('coins-val').textContent =
         formatCompactNumber(state.coins);
@@ -1570,6 +1750,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     function updateUI(){
       updateCoinsUI();
       renderBallsPanel();
+      updateLeaderboardScoreUI();
       queueSave();
     }
 
@@ -1879,6 +2060,34 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const closeSettingsPanel = bindSlidePanel('btn-settings-toggle', 'settings-panel', 'btn-settings-close');
     bindSlidePanel('btn-balls-toggle', 'balls-panel', 'btn-balls-close');
     bindSlidePanel('btn-admin-toggle', 'admin-panel', 'btn-admin-close');
+    bindSlidePanel('btn-leaderboard', 'leaderboard-panel', 'btn-leaderboard-close');
+
+    document
+      .getElementById('btn-leaderboard-login')
+      .addEventListener('click', loginLeaderboard);
+
+    getElementById<HTMLInputElement>('leaderboard-name-input').addEventListener('keydown', event => {
+      if(event.key === 'Enter'){
+        loginLeaderboard();
+      }
+    });
+
+    document
+      .getElementById('btn-leaderboard-logout')
+      .addEventListener('click', () => {
+        saveLeaderboardPlayer(null);
+        setLeaderboardMessage('Abgemeldet.');
+      });
+
+    document
+      .getElementById('btn-leaderboard-submit')
+      .addEventListener('click', submitLeaderboardScore);
+
+    document
+      .getElementById('btn-leaderboard-refresh')
+      .addEventListener('click', refreshLeaderboard);
+
+    refreshLeaderboard();
 
     document
       .getElementById('btn-balls-bulk-toggle')
