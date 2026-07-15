@@ -139,6 +139,33 @@ canvas{
   font-size:13px;
 }
 
+#system-meters{
+  position:absolute;
+  top:8px;
+  right:8px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:3px;
+  pointer-events:none;
+}
+
+.system-meter{
+  padding:2px 5px;
+  border:0.5px solid var(--border-soft);
+  border-radius:5px;
+  background:rgba(0,0,0,0.18);
+  color:var(--muted);
+  font-family:ui-monospace,monospace;
+  font-size:8px;
+  line-height:1.2;
+  white-space:nowrap;
+}
+
+.system-meter span{
+  color:var(--muted-strong);
+}
+
 #combo-pill{
   transition:opacity .3s;
 }
