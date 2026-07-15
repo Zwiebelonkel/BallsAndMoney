@@ -38,7 +38,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let ballsPanelDirty = true;
     let lastBallsPanelRender = 0;
 
-    const FLOAT_MERGE_DISTANCE = 44;
+    const FLOAT_MERGE_DISTANCE = 80;
     const FLOAT_MERGE_WINDOW_MS = 180;
     const activeFloatTexts = [];
 
@@ -1115,10 +1115,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
 
       if(ball.image && ball.image.complete && ball.image.naturalWidth > 0){
+        const sourceSize = Math.min(ball.image.naturalWidth, ball.image.naturalHeight);
+        const sourceX = (ball.image.naturalWidth - sourceSize) / 2;
+        const sourceY = (ball.image.naturalHeight - sourceSize) / 2;
+
         ctx.save();
         ctx.clip();
         ctx.drawImage(
           ball.image,
+          sourceX,
+          sourceY,
+          sourceSize,
+          sourceSize,
           ball.x - ball.r,
           ball.y - ball.r,
           ball.r * 2,
@@ -1161,6 +1169,32 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     let lastTime = performance.now();
     let lastBackgroundTime = lastTime;
+    let fpsFrameCount = 0;
+    let fpsLastUpdate = lastTime;
+
+    function getTotalKineticEnergy(){
+      return objects.reduce((total, ball) => {
+        if(ball.active === false){
+          return total;
+        }
+
+        return total + 0.5 * ball.m * (ball.vx * ball.vx + ball.vy * ball.vy);
+      }, 0);
+    }
+
+    function updateSystemMeters(now){
+      fpsFrameCount++;
+
+      if(now - fpsLastUpdate >= 500){
+        const fps = fpsFrameCount * 1000 / (now - fpsLastUpdate);
+        document.getElementById('fps-val').textContent = Math.round(fps).toString();
+        fpsFrameCount = 0;
+        fpsLastUpdate = now;
+      }
+
+      document.getElementById('energy-val').textContent =
+        formatCompactNumber(getTotalKineticEnergy(), 2);
+    }
     function simulateStep(delta, shouldDraw){
       for(const ball of objects){
         if(ball.active === false){
@@ -1264,6 +1298,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       lastBackgroundTime = now;
 
       updateCollisionRate(now);
+      updateSystemMeters(now);
       drawFrame();
 
       if(ballsPanelDirty && now - lastBallsPanelRender > 500){
@@ -1385,6 +1420,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       simulateElapsed(now - lastBackgroundTime, false);
       updateCollisionRate(now);
+      document.getElementById('energy-val').textContent =
+        formatCompactNumber(getTotalKineticEnergy(), 2);
       lastBackgroundTime = now;
       lastTime = now;
       drawDashboard();
@@ -1541,6 +1578,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       const image = new Image();
       image.dataset.src = ball.imageSrc;
+      image.addEventListener('error', () => {
+        if(ball.image === image){
+          ball.image = null;
+        }
+      });
       image.src = ball.imageSrc;
       ball.image = image;
     }
