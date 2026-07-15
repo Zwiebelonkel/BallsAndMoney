@@ -44,6 +44,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const MAX_DEVICE_PIXEL_RATIO = 2;
 
     function setInitialCanvasSize(){
+      if(window.matchMedia('(max-width: 720px)').matches){
+        const viewportWidth = Math.max(1, Math.round(window.innerWidth));
+        document.documentElement.style.setProperty(
+          '--mobile-canvas-size',
+          `${viewportWidth}px`
+        );
+      }
+
       const rect = wrap.getBoundingClientRect();
 
       W = Math.max(1, Math.round(rect.width || wrap.clientWidth));
