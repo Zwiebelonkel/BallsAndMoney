@@ -35,6 +35,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let objects = [];
     let replacementBalls = [];
     let ballsPanelDirty = true;
+    let lastBallsPanelRender = 0;
+
+    const FLOAT_MERGE_DISTANCE = 44;
+    const FLOAT_MERGE_WINDOW_MS = 180;
+    const activeFloatTexts = [];
 
     const MAX_DEVICE_PIXEL_RATIO = 2;
 
@@ -919,18 +924,55 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       state.moneyCount += earnedCoins;
 
       spawnFloat(x, y, earnedCoins);
-      updateUI();
+      updateCoinsUI();
     }
 
     function spawnFloat(x, y, value){
+      const rect = canvas.getBoundingClientRect();
+      const screenX = x * (rect.width / W);
+      const screenY = y * (rect.height / H);
+      const now = performance.now();
+
+      const nearbyFloat = activeFloatTexts.find(item => {
+        if(now - item.updatedAt > FLOAT_MERGE_WINDOW_MS){
+          return false;
+        }
+
+        const dx = item.x - screenX;
+        const dy = item.y - screenY;
+
+        return dx * dx + dy * dy <= FLOAT_MERGE_DISTANCE * FLOAT_MERGE_DISTANCE;
+      });
+
+      if(nearbyFloat){
+        nearbyFloat.value += value;
+        nearbyFloat.x = (nearbyFloat.x + screenX) / 2;
+        nearbyFloat.y = (nearbyFloat.y + screenY) / 2;
+        nearbyFloat.updatedAt = now;
+        nearbyFloat.element.textContent = '+' + formatCompactNumber(nearbyFloat.value);
+        nearbyFloat.element.style.left = nearbyFloat.x + 'px';
+        nearbyFloat.element.style.top = nearbyFloat.y + 'px';
+        nearbyFloat.element.classList.remove('is-merged');
+        void nearbyFloat.element.offsetWidth;
+        nearbyFloat.element.classList.add('is-merged');
+        return;
+      }
+
       const element = document.createElement('div');
+      const floatItem = {
+        element,
+        value,
+        x: screenX,
+        y: screenY,
+        updatedAt: now
+      };
 
       element.className = 'float-text';
       element.textContent = '+' + formatCompactNumber(value);
-      const rect = canvas.getBoundingClientRect();
+      element.style.left = screenX + 'px';
+      element.style.top = screenY + 'px';
 
-      element.style.left = x * (rect.width / W) + 'px';
-      element.style.top = y * (rect.height / H) + 'px';
+      activeFloatTexts.push(floatItem);
 
       document
         .getElementById('float-coins')
@@ -938,6 +980,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       setTimeout(() => {
         element.remove();
+        const index = activeFloatTexts.indexOf(floatItem);
+
+        if(index >= 0){
+          activeFloatTexts.splice(index, 1);
+        }
       }, 1200);
     }
 
@@ -1197,6 +1244,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       updateCollisionRate(now);
       drawFrame();
 
+      if(ballsPanelDirty && now - lastBallsPanelRender > 500){
+        renderBallsPanel();
+      }
+
       if(drag.active){
         const dx = drag.startX - drag.x;
         const dy = drag.startY - drag.y;
@@ -1370,6 +1421,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
+      lastBallsPanelRender = performance.now();
+
       const list = document.getElementById('balls-list');
       const summary = document.getElementById('balls-summary');
       const toggleValue = document.getElementById('balls-toggle-value');
@@ -1512,11 +1565,15 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       queueSave();
     }
 
-    function updateUI(){
+    function updateCoinsUI(){
       document.getElementById('coins-val').textContent =
         formatCompactNumber(state.coins);
 
       updateButtons();
+    }
+
+    function updateUI(){
+      updateCoinsUI();
       renderBallsPanel();
       queueSave();
     }
