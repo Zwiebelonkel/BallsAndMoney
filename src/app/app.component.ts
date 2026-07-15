@@ -43,12 +43,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     const MAX_DEVICE_PIXEL_RATIO = 2;
 
-    function resize(){
-      const previousW = W || wrap.clientWidth || 1;
-      const previousH = H || wrap.clientHeight || 1;
+    function setInitialCanvasSize(){
+      const rect = wrap.getBoundingClientRect();
 
-      W = Math.max(1, wrap.clientWidth);
-      H = Math.max(1, wrap.clientHeight);
+      W = Math.max(1, Math.round(rect.width || wrap.clientWidth));
+      H = Math.max(1, Math.round(rect.height || wrap.clientHeight));
 
       const devicePixelRatio = Math.min(
         window.devicePixelRatio || 1,
@@ -65,22 +64,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         0,
         0
       );
-
-      if(objects.length > 0){
-        const scaleX = W / previousW;
-        const scaleY = H / previousH;
-
-        for(const ball of objects){
-          ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x * scaleX));
-          ball.y = Math.max(ball.r, Math.min(H - ball.r, ball.y * scaleY));
-          ball.trail = [];
-        }
-      }
     }
 
-    resize();
-
-    new ResizeObserver(resize).observe(wrap);
+    setInitialCanvasSize();
 
 
     function blockBrowserZoom(){
@@ -372,9 +358,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           Object.assign(preferences, data.preferences);
         }
 
-        if(data.arena){
-          resize();
-        }
+        const savedArenaW = Number.isFinite(data.arena?.w) ? data.arena.w : W;
+        const savedArenaH = Number.isFinite(data.arena?.h) ? data.arena.h : H;
+        const savedArenaScaleX = W / Math.max(1, savedArenaW);
+        const savedArenaScaleY = H / Math.max(1, savedArenaH);
 
         hueIdx = Number.isFinite(data.hueIdx) ? data.hueIdx : hueIdx;
         objectIndex = Number.isFinite(data.objectIndex) ? data.objectIndex : objectIndex;
@@ -384,8 +371,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             .filter(ball => Number.isFinite(ball.x) && Number.isFinite(ball.y))
             .map(ball => ({
               id: Number.isFinite(ball.id) ? ball.id : objectIndex++,
-              x: ball.x,
-              y: ball.y,
+              x: ball.x * savedArenaScaleX,
+              y: ball.y * savedArenaScaleY,
               vx: Number.isFinite(ball.vx) ? ball.vx : 0,
               vy: Number.isFinite(ball.vy) ? ball.vy : 0,
               r: Number.isFinite(ball.r) ? ball.r : getBaseR(),
