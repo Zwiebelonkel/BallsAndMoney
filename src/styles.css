@@ -800,3 +800,120 @@ app-balls-panel{
   border-color:rgba(159,225,203,0.35);
   color:var(--good);
 }
+
+app-leaderboard-panel{
+  display:contents;
+}
+
+.leaderboard-panel-card{
+  width:min(520px,calc(100vw - 28px));
+}
+
+.leaderboard-login,
+.leaderboard-actions{
+  display:grid;
+  gap:7px;
+  margin-bottom:8px;
+}
+
+.leaderboard-label,
+.leaderboard-message,
+.leaderboard-empty{
+  color:var(--muted-strong);
+  font-size:10px;
+}
+
+.leaderboard-login-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:7px;
+}
+
+.leaderboard-input{
+  width:100%;
+  padding:8px 9px;
+  border:0.5px solid var(--border);
+  border-radius:8px;
+  background:var(--surface-soft);
+  color:var(--text);
+  font:12px ui-monospace,monospace;
+  -webkit-user-select:text;
+  user-select:text;
+}
+
+.leaderboard-input:focus{
+  outline:1px solid rgba(250,199,117,0.45);
+}
+
+.leaderboard-profile{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  align-items:center;
+  margin-bottom:8px;
+  padding:8px;
+  border:0.5px solid var(--border-soft);
+  border-radius:8px;
+  background:var(--surface-soft);
+  color:var(--muted-strong);
+  font-size:10px;
+}
+
+.leaderboard-profile strong{
+  color:var(--accent);
+  font-family:ui-monospace,monospace;
+}
+
+.leaderboard-profile[hidden]{
+  display:none;
+}
+
+.leaderboard-message{
+  min-height:14px;
+  margin:4px 0 8px;
+}
+
+.leaderboard-message.is-error{
+  color:#D85A30;
+}
+
+.leaderboard-list{
+  display:grid;
+  gap:7px;
+}
+
+.leaderboard-row{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr);
+  gap:8px;
+  align-items:center;
+  padding:8px;
+  border:0.5px solid var(--border-soft);
+  border-radius:9px;
+  background:var(--surface-soft);
+}
+
+.leaderboard-row.is-current{
+  border-color:rgba(250,199,117,0.45);
+  background:rgba(250,199,117,0.06);
+}
+
+.leaderboard-rank{
+  color:var(--accent);
+  font:12px ui-monospace,monospace;
+}
+
+.leaderboard-entry-name{
+  color:var(--text);
+  font-size:11px;
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.leaderboard-entry-meta{
+  margin-top:2px;
+  color:var(--muted-strong);
+  font:10px/1.35 ui-monospace,monospace;
+}
