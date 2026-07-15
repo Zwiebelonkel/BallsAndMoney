@@ -643,6 +643,10 @@ app-balls-panel{
   font-family:ui-monospace,monospace;
 }
 
+.balls-bulk-toggle{
+  margin-bottom:8px;
+}
+
 .balls-list{
   display:grid;
   gap:7px;
@@ -664,11 +668,25 @@ app-balls-panel{
 }
 
 .ball-color{
-  width:18px;
-  height:18px;
+  width:22px;
+  height:22px;
+  padding:0;
   border:0.5px solid var(--border);
   border-radius:50%;
   box-shadow:0 0 12px currentColor;
+  cursor:pointer;
+}
+
+.ball-color:hover{
+  transform:scale(1.08);
+}
+
+.ball-color-input{
+  position:absolute;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
 }
 
 .ball-info{

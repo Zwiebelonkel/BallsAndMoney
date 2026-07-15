@@ -1181,6 +1181,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const list = document.getElementById('balls-list');
       const summary = document.getElementById('balls-summary');
       const toggleValue = document.getElementById('balls-toggle-value');
+      const bulkToggle = getElementById<HTMLButtonElement>('btn-balls-bulk-toggle');
+      const bulkToggleValue = document.getElementById('balls-bulk-toggle-value');
       const activeCount = objects.filter(ball => ball.active !== false).length;
 
       toggleValue.textContent =
@@ -1189,12 +1191,26 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       if(objects.length === 0){
         summary.textContent = 'Keine Kugeln vorhanden.';
         list.innerHTML = '';
+        bulkToggle.disabled = true;
+        bulkToggle.textContent = 'Alle Kugeln deaktivieren';
+        bulkToggle.appendChild(bulkToggleValue);
+        bulkToggleValue.textContent = 'Keine Kugeln';
         ballsPanelDirty = false;
         return;
       }
 
       summary.textContent =
         `${objects.length} Kugeln · ${activeCount} aktiv · ${objects.length - activeCount} deaktiviert`;
+
+      const shouldActivateAll = activeCount < objects.length;
+      bulkToggle.disabled = false;
+      bulkToggle.textContent = shouldActivateAll
+        ? 'Alle Kugeln aktivieren'
+        : 'Alle Kugeln deaktivieren';
+      bulkToggle.appendChild(bulkToggleValue);
+      bulkToggleValue.textContent = shouldActivateAll
+        ? `${objects.length - activeCount} deaktiviert`
+        : `${activeCount} aktiv`;
 
       list.innerHTML = objects
         .map((ball, index) => {
@@ -1205,10 +1221,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
           return `
             <div class="ball-row ${statusClass}" role="listitem">
-              <div class="ball-color" style="background:${ball.col}" aria-hidden="true"></div>
+              <button class="ball-color" type="button" style="background:${ball.col}" data-ball-id="${ball.id}" aria-label="Farbe von Ball Nr. ${ballNumber} ändern"></button>
+              <input class="ball-color-input" type="color" value="${ball.col}" data-ball-id="${ball.id}" aria-label="Farbe von Ball Nr. ${ballNumber}">
               <div class="ball-info">
                 <div class="ball-title">Ball Nr. ${ballNumber}</div>
-                <div class="ball-meta">Größe ${formatBallSize(ball)} · Farbe ${ball.col} · Kollisionen ${ball.collisions || 0}</div>
+                <div class="ball-meta">Größe ${formatBallSize(ball)} · Kollisionen ${ball.collisions || 0}</div>
               </div>
               <button class="ball-toggle" type="button" data-ball-id="${ball.id}" aria-pressed="${isActive}">${statusLabel}</button>
             </div>
@@ -1217,6 +1234,30 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         .join('');
 
       ballsPanelDirty = false;
+    }
+
+    function setAllBallsActive(isActive){
+      for(const ball of objects){
+        ball.active = isActive;
+        ball.trail = [];
+      }
+
+      ballsPanelDirty = true;
+      renderBallsPanel(true);
+      queueSave();
+    }
+
+    function setBallColor(ballId, color){
+      const ball = objects.find(item => item.id === ballId);
+
+      if(!ball || !/^#[0-9a-f]{6}$/i.test(color)){
+        return;
+      }
+
+      ball.col = color;
+      ballsPanelDirty = true;
+      renderBallsPanel(true);
+      queueSave();
     }
 
     function toggleBallActive(ballId){
@@ -1490,6 +1531,39 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         }
       });
 
+      const card = panel.querySelector('.slide-panel-card') as HTMLElement;
+      let swipeStartY = 0;
+      let swipeStartX = 0;
+      let swipeTracking = false;
+
+      card.addEventListener('pointerdown', event => {
+        if(event.pointerType === 'mouse'){
+          return;
+        }
+
+        swipeStartY = event.clientY;
+        swipeStartX = event.clientX;
+        swipeTracking = card.scrollTop <= 0;
+      }, { passive: true });
+
+      card.addEventListener('pointerup', event => {
+        if(!swipeTracking){
+          return;
+        }
+
+        const deltaY = event.clientY - swipeStartY;
+        const deltaX = Math.abs(event.clientX - swipeStartX);
+        swipeTracking = false;
+
+        if(deltaY > 70 && deltaY > deltaX * 1.4){
+          setOpen(false);
+        }
+      }, { passive: true });
+
+      card.addEventListener('pointercancel', () => {
+        swipeTracking = false;
+      }, { passive: true });
+
       return () => setOpen(false);
     }
 
@@ -1499,15 +1573,40 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     bindSlidePanel('btn-admin-toggle', 'admin-panel', 'btn-admin-close');
 
     document
+      .getElementById('btn-balls-bulk-toggle')
+      .addEventListener('click', () => {
+        const activeCount = objects.filter(ball => ball.active !== false).length;
+        setAllBallsActive(activeCount < objects.length);
+      });
+
+    document
       .getElementById('balls-list')
       .addEventListener('click', event => {
         const target = event.target as HTMLElement;
+
+        if(target.matches('.ball-color')){
+          const input = target.parentElement.querySelector('.ball-color-input') as HTMLInputElement;
+          input.click();
+          return;
+        }
 
         if(!target.matches('.ball-toggle')){
           return;
         }
 
         toggleBallActive(Number(target.dataset['ballId']));
+      });
+
+    document
+      .getElementById('balls-list')
+      .addEventListener('change', event => {
+        const target = event.target as HTMLInputElement;
+
+        if(!target.matches('.ball-color-input')){
+          return;
+        }
+
+        setBallColor(Number(target.dataset['ballId']), target.value);
       });
 
     document
