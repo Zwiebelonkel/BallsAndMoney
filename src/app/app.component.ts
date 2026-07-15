@@ -112,7 +112,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const preferences = {
       theme: 'dark',
       colorMode: 'color',
-      graphVisible: true
+      graphVisible: true,
+      ballTrailsVisible: true,
+      moneyPopupsVisible: true
     };
 
     const COLORS = [
@@ -164,6 +166,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       document.getElementById('theme-val').textContent = preferences.theme === 'light' ? 'Light' : 'Dark';
       document.getElementById('color-mode-val').textContent = preferences.colorMode === 'mono' ? 'Schwarz-Weiß' : 'Farben aktiv';
       document.getElementById('graph-val').textContent = preferences.graphVisible ? 'Sichtbar' : 'Ausgeblendet';
+      document.getElementById('ball-trails-val').textContent = preferences.ballTrailsVisible ? 'Aktiv' : 'Aus';
+      document.getElementById('money-popups-val').textContent = preferences.moneyPopupsVisible ? 'Aktiv' : 'Aus';
+
+      if(!preferences.ballTrailsVisible){
+        for(const ball of objects){
+          ball.trail = [];
+        }
+      }
+
+      if(!preferences.moneyPopupsVisible){
+        clearFloatTexts();
+      }
     }
 
     const state = {
@@ -451,6 +465,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       preferences.theme = 'dark';
       preferences.colorMode = 'color';
       preferences.graphVisible = true;
+      preferences.ballTrailsVisible = true;
+      preferences.moneyPopupsVisible = true;
       objects = [];
       replacementBalls = [];
       ballsPanelDirty = true;
@@ -919,8 +935,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       state.coins += earnedCoins;
       state.moneyCount += earnedCoins;
 
-      spawnFloat(x, y, earnedCoins);
+      if(preferences.moneyPopupsVisible){
+        spawnFloat(x, y, earnedCoins);
+      }
       updateCoinsUI();
+    }
+
+    function clearFloatTexts(){
+      for(const item of activeFloatTexts){
+        item.element.remove();
+      }
+
+      activeFloatTexts.length = 0;
     }
 
     function spawnFloat(x, y, value){
@@ -1043,7 +1069,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function drawBall(ball){
-      if(ball.trail.length > 1){
+      if(preferences.ballTrailsVisible && ball.trail.length > 1){
         ctx.beginPath();
         ctx.moveTo(ball.trail[0].x, ball.trail[0].y);
 
@@ -1146,7 +1172,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         wallBounce(ball);
 
-        if(shouldDraw){
+        if(shouldDraw && preferences.ballTrailsVisible){
           ball.trail.push({
             x: ball.x,
             y: ball.y
@@ -1564,6 +1590,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     const LEADERBOARD_PLAYER_KEY = 'ballsAndMoneyLeaderboardPlayer';
     const LEADERBOARD_API_BASE = 'https://ballsandmoney.onrender.com';
+    const LEADERBOARD_LIMIT = 25;
     let leaderboardPlayer = loadLeaderboardPlayer();
     let leaderboardBusy = false;
 
@@ -1655,7 +1682,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     async function refreshLeaderboard(){
       try{
         setLeaderboardMessage('Leaderboard wird geladen ...');
-        const response = await fetch(getLeaderboardUrl('?limit=25'));
+        const response = await fetch(getLeaderboardUrl(`?limit=${LEADERBOARD_LIMIT}`));
         const data = await response.json();
 
         if(!response.ok){
@@ -1667,6 +1694,21 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       } catch(error){
         setLeaderboardMessage(error instanceof Error ? error.message : 'Leaderboard konnte nicht geladen werden.', true);
       }
+    }
+
+    async function openLeaderboard(){
+      updateLeaderboardScoreUI();
+
+      if(leaderboardBusy){
+        return;
+      }
+
+      if(leaderboardPlayer?.id && leaderboardPlayer?.token){
+        await submitLeaderboardScore();
+        return;
+      }
+
+      await refreshLeaderboard();
     }
 
     async function loginLeaderboard(){
@@ -1997,7 +2039,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         });
       });
 
-    function bindSlidePanel(toggleId, panelId, closeId){
+    function bindSlidePanel(toggleId, panelId, closeId, onOpen = null){
       const toggle = getElementById<HTMLButtonElement>(toggleId);
       const panel = getElementById<HTMLElement>(panelId);
       const close = getElementById<HTMLButtonElement>(closeId);
@@ -2012,7 +2054,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         toggle.setAttribute('aria-expanded', String(isOpen));
       }
 
-      toggle.addEventListener('click', () => setOpen(true));
+      toggle.addEventListener('click', () => {
+        setOpen(true);
+
+        if(typeof onOpen === 'function'){
+          onOpen();
+        }
+      });
       close.addEventListener('click', () => setOpen(false));
       panel.addEventListener('click', event => {
         if(event.target === panel){
@@ -2060,7 +2108,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const closeSettingsPanel = bindSlidePanel('btn-settings-toggle', 'settings-panel', 'btn-settings-close');
     bindSlidePanel('btn-balls-toggle', 'balls-panel', 'btn-balls-close');
     bindSlidePanel('btn-admin-toggle', 'admin-panel', 'btn-admin-close');
-    bindSlidePanel('btn-leaderboard', 'leaderboard-panel', 'btn-leaderboard-close');
+    bindSlidePanel('btn-leaderboard', 'leaderboard-panel', 'btn-leaderboard-close', openLeaderboard);
 
     document
       .getElementById('btn-leaderboard-login')
@@ -2086,8 +2134,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     document
       .getElementById('btn-leaderboard-refresh')
       .addEventListener('click', refreshLeaderboard);
-
-    refreshLeaderboard();
 
     document
       .getElementById('btn-balls-bulk-toggle')
@@ -2217,6 +2263,22 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .getElementById('btn-graph')
       .addEventListener('click', () => {
         preferences.graphVisible = !preferences.graphVisible;
+        applyPreferences();
+        saveGame();
+      });
+
+    document
+      .getElementById('btn-ball-trails')
+      .addEventListener('click', () => {
+        preferences.ballTrailsVisible = !preferences.ballTrailsVisible;
+        applyPreferences();
+        saveGame();
+      });
+
+    document
+      .getElementById('btn-money-popups')
+      .addEventListener('click', () => {
+        preferences.moneyPopupsVisible = !preferences.moneyPopupsVisible;
         applyPreferences();
         saveGame();
       });

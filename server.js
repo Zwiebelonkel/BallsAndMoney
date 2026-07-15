@@ -139,14 +139,16 @@ function toNonNegativeInteger(value){
   return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : 0;
 }
 
-async function getEntries(limit = 25){
+const LEADERBOARD_LIMIT = 25;
+
+async function getEntries(limit = LEADERBOARD_LIMIT){
   const result = await execute(`
     SELECT p.id AS playerId, p.name, s.prestige, s.money, s.balls, s.updated_at AS updatedAt
     FROM leaderboard_scores s
     JOIN leaderboard_players p ON p.id = s.player_id
     ORDER BY s.prestige DESC, s.money DESC, s.balls DESC, s.updated_at ASC
     LIMIT ?
-  `, [Math.min(100, Math.max(1, toNonNegativeInteger(limit) || 25))]);
+  `, [Math.min(LEADERBOARD_LIMIT, Math.max(1, toNonNegativeInteger(limit) || LEADERBOARD_LIMIT))]);
 
   return result.rows.map((row, index) => ({
     rank: index + 1,
@@ -222,7 +224,7 @@ app.post('/api/leaderboard/score', async (request, response, next) => {
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     `, [playerId, prestige, money, balls]);
 
-    response.json({ entries: await getEntries(25) });
+    response.json({ entries: await getEntries(LEADERBOARD_LIMIT) });
   } catch(error){
     next(error);
   }
