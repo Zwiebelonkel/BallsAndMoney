@@ -568,19 +568,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       });
 
       document.getElementById('dash-collisions').textContent =
-        state.colPerSec.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+        formatCompactNumber(state.colPerSec);
       document.getElementById('dash-collisions-max').textContent =
-        collisionMax.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+        formatCompactNumber(collisionMax);
       document.getElementById('dash-collisions-avg').textContent =
-        collisionAverage.toLocaleString('de-DE', { maximumFractionDigits: 1 });
-      document.getElementById('dash-n').textContent = objects.length.toString();
+        formatCompactNumber(collisionAverage);
+      document.getElementById('dash-n').textContent = formatCompactNumber(objects.length);
 
       document.getElementById('dash-money').textContent =
-        state.moneyPerSec.toLocaleString('de-DE', { maximumFractionDigits: 0 });
+        formatCompactNumber(state.moneyPerSec);
       document.getElementById('dash-money-max').textContent =
-        moneyMax.toLocaleString('de-DE', { maximumFractionDigits: 0 });
+        formatCompactNumber(moneyMax);
       document.getElementById('dash-money-avg').textContent =
-        moneyAverage.toLocaleString('de-DE', { maximumFractionDigits: 0 });
+        formatCompactNumber(moneyAverage);
       document.getElementById('dash-global-mult').textContent =
         getGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 });
     }
@@ -867,7 +867,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const element = document.createElement('div');
 
       element.className = 'float-text';
-      element.textContent = '+' + value;
+      element.textContent = '+' + formatCompactNumber(value);
       const rect = canvas.getBoundingClientRect();
 
       element.style.left = x * (rect.width / W) + 'px';
@@ -911,7 +911,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
 
       ctx.save();
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 4;
       ctx.lineCap = 'butt';
 
       for(const side of activeSides){
@@ -921,17 +921,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         ctx.beginPath();
 
         if(side.key === 'top'){
-          ctx.moveTo(0, 4);
-          ctx.lineTo(W, 4);
+          ctx.moveTo(0, 2);
+          ctx.lineTo(W, 2);
         } else if(side.key === 'right'){
-          ctx.moveTo(W - 4, 0);
-          ctx.lineTo(W - 4, H);
+          ctx.moveTo(W - 2, 0);
+          ctx.lineTo(W - 2, H);
         } else if(side.key === 'bottom'){
-          ctx.moveTo(W, H - 4);
-          ctx.lineTo(0, H - 4);
+          ctx.moveTo(W, H - 2);
+          ctx.lineTo(0, H - 2);
         } else {
-          ctx.moveTo(4, H);
-          ctx.lineTo(4, 0);
+          ctx.moveTo(2, H);
+          ctx.lineTo(2, 0);
         }
 
         ctx.stroke();
@@ -1103,7 +1103,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       state.lastColT = now;
 
       document.getElementById('col-val').textContent =
-        state.colPerSec.toFixed(1);
+        formatCompactNumber(state.colPerSec);
     }
 
     function loop(now){
@@ -1258,8 +1258,35 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     /* UI */
 
+    function formatCompactNumber(value, maximumFractionDigits = 1){
+      const sign = value < 0 ? '-' : '';
+      const absoluteValue = Math.abs(value);
+
+      if(absoluteValue < 1000){
+        return sign + Math.floor(absoluteValue).toString();
+      }
+
+      const suffixes = [
+        { value: 1000000000000, suffix: 'T' },
+        { value: 1000000000, suffix: 'B' },
+        { value: 1000000, suffix: 'M' },
+        { value: 1000, suffix: 'k' }
+      ];
+
+      const unit = suffixes.find(item => absoluteValue >= item.value);
+      const scaled = absoluteValue / unit.value;
+      const factor = Math.pow(10, maximumFractionDigits);
+      const rounded = Math.round(scaled * factor) / factor;
+      const formatted = rounded
+        .toFixed(maximumFractionDigits)
+        .replace(/\.0+$/, '')
+        .replace(/(\.\d*?)0+$/, '$1');
+
+      return sign + formatted + unit.suffix;
+    }
+
     function formatBallSize(ball){
-      return (ball.r * 2).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+      return formatCompactNumber(ball.r * 2);
     }
 
     function renderBallsPanel(force = false){
@@ -1275,7 +1302,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const activeCount = objects.filter(ball => ball.active !== false).length;
 
       toggleValue.textContent =
-        `${activeCount}/${objects.length} aktiv`;
+        `${formatCompactNumber(activeCount)}/${formatCompactNumber(objects.length)} aktiv`;
 
       if(objects.length === 0){
         summary.textContent = 'Keine Kugeln vorhanden.';
@@ -1289,7 +1316,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
 
       summary.textContent =
-        `${objects.length} Kugeln · ${activeCount} aktiv · ${objects.length - activeCount} deaktiviert`;
+        `${formatCompactNumber(objects.length)} Kugeln · ${formatCompactNumber(activeCount)} aktiv · ${formatCompactNumber(objects.length - activeCount)} deaktiviert`;
 
       const shouldActivateAll = activeCount < objects.length;
       bulkToggle.disabled = false;
@@ -1298,8 +1325,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         : 'Alle Kugeln deaktivieren';
       bulkToggle.appendChild(bulkToggleValue);
       bulkToggleValue.textContent = shouldActivateAll
-        ? `${objects.length - activeCount} deaktiviert`
-        : `${activeCount} aktiv`;
+        ? `${formatCompactNumber(objects.length - activeCount)} deaktiviert`
+        : `${formatCompactNumber(activeCount)} aktiv`;
 
       list.innerHTML = objects
         .map((ball, index) => {
@@ -1314,7 +1341,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
               <input class="ball-color-input" type="color" value="${ball.col}" data-ball-id="${ball.id}" aria-label="Farbe von Ball Nr. ${ballNumber}">
               <div class="ball-info">
                 <div class="ball-title">Ball Nr. ${ballNumber}</div>
-                <div class="ball-meta">Größe ${formatBallSize(ball)} · Kollisionen ${ball.collisions || 0}</div>
+                <div class="ball-meta">Größe ${formatBallSize(ball)} · Kollisionen ${formatCompactNumber(ball.collisions || 0)}</div>
               </div>
               <button class="ball-toggle" type="button" data-ball-id="${ball.id}" aria-pressed="${isActive}">${statusLabel}</button>
             </div>
@@ -1365,7 +1392,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     function updateUI(){
       document.getElementById('coins-val').textContent =
-        Math.floor(state.coins).toLocaleString('de-DE');
+        formatCompactNumber(state.coins);
 
       updateButtons();
       renderBallsPanel();
@@ -1404,7 +1431,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           costElement.textContent = 'MAX ✓';
           costElement.className = 'btn-cost maxed';
         } else {
-          costElement.textContent = cost + ' 🪙';
+          costElement.textContent = formatCompactNumber(cost) + ' 🪙';
           costElement.className = 'btn-cost';
         }
       }
@@ -1453,7 +1480,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       prestigeButton.className =
         'upgrade-btn' + (coins >= prestigeCost ? ' can-afford' : '');
       const prestigeCostText =
-        prestigeCost.toLocaleString('de-DE') +
+        formatCompactNumber(prestigeCost) +
         ` 🪙 → Global x${getNextGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 })}`;
 
       prestigeCostElement.textContent = prestigeCostText;
@@ -1462,7 +1489,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       document.getElementById('prestige-next-mult').textContent =
         `Global x${getNextGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 })}`;
       document.getElementById('prestige-panel-cost').textContent =
-        prestigeCost.toLocaleString('de-DE') + ' 🪙';
+        formatCompactNumber(prestigeCost) + ' 🪙';
       const prestigeConfirmButton = getElementById<HTMLButtonElement>('btn-prestige-confirm');
       prestigeConfirmButton.disabled = false;
       prestigeConfirmButton.className =
@@ -1483,9 +1510,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       if(state.coins < prestigeCost){
         alert(
           'Prestige benötigt ' +
-          prestigeCost.toLocaleString('de-DE') +
+          formatCompactNumber(prestigeCost) +
           ' 🪙. Dir fehlen noch ' +
-          Math.ceil(prestigeCost - state.coins).toLocaleString('de-DE') +
+          formatCompactNumber(Math.ceil(prestigeCost - state.coins)) +
           ' 🪙.'
         );
         return false;
@@ -1812,7 +1839,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           'Max. Kugeln erreicht – Kapazität kaufen!';
       } else {
         hint.textContent =
-          `Drag/Touch → schießen · Tipp/Klick = zufällig (${current}/${maximum})`;
+          `Drag/Touch → schießen · Tipp/Klick = zufällig (${formatCompactNumber(current)}/${formatCompactNumber(maximum)})`;
       }
     }
 
