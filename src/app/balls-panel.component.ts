@@ -16,14 +16,14 @@ import { Component } from '@angular/core';
         <div class="slide-panel-header">
           <div>
             <div class="slide-panel-title">Balls</div>
-            <div class="slide-panel-copy">Alle Kugeln mit Nummer, Größe, Kollisionen, Farbe und Aktiv-Status.</div>
+            <div class="slide-panel-copy">Alle Kugeln mit Nummer, Größe, Kollisionen, Farbe und Ersatz-Status.</div>
           </div>
           <button class="panel-close" id="btn-balls-close" type="button" aria-label="Balls schließen">×</button>
         </div>
 
         <div class="balls-summary" id="balls-summary">Keine Kugeln vorhanden.</div>
         <button class="setting-btn balls-bulk-toggle" id="btn-balls-bulk-toggle" type="button" disabled>
-          Alle Kugeln deaktivieren
+          Alle Kugeln ersetzen
           <span class="setting-value" id="balls-bulk-toggle-value">Keine Kugeln</span>
         </button>
         <div class="balls-list" id="balls-list" role="list" aria-live="polite"></div>
