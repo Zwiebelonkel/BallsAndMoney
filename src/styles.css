@@ -706,6 +706,38 @@ app-balls-panel{
   overflow-wrap:anywhere;
 }
 
+
+.ball-actions{
+  display:grid;
+  gap:5px;
+  justify-items:stretch;
+}
+
+.ball-image{
+  display:block;
+  padding:6px 8px;
+  border:0.5px solid var(--border);
+  border-radius:7px;
+  background:var(--surface-soft);
+  color:var(--accent);
+  cursor:pointer;
+  font-size:10px;
+  font-family:system-ui,sans-serif;
+  text-align:center;
+}
+
+.ball-image:hover{
+  background:var(--surface-hover);
+}
+
+.ball-image-input{
+  position:absolute;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
+
 .ball-toggle{
   padding:6px 8px;
   border:0.5px solid var(--border);
