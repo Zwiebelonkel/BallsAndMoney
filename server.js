@@ -1,5 +1,4 @@
 const crypto = require('node:crypto');
-const path = require('node:path');
 const express = require('express');
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -186,10 +185,8 @@ app.post('/api/leaderboard/score', async (request, response, next) => {
 });
 
 
-const staticDir = path.join(__dirname, 'dist', 'balls-and-money', 'browser');
-app.use(express.static(staticDir));
-app.get(/^(?!\/api).*/, (request, response) => {
-  response.sendFile(path.join(staticDir, 'index.html'));
+app.use((request, response) => {
+  response.status(404).json({ error: 'Nicht gefunden.' });
 });
 
 app.use((error, request, response, next) => {
