@@ -40,6 +40,12 @@ import { Component } from '@angular/core';
             <div class="btn-desc">Fügt deinem Spielstand sofort 1.000.000 Münzen hinzu</div>
             <div class="btn-cost">Admin Aktion</div>
           </button>
+
+          <button class="upgrade-btn can-afford" id="btn-admin-free-upgrades" type="button" aria-pressed="false">
+            <div class="btn-name">Kostenlose Upgrades</div>
+            <div class="btn-desc">Jedes Shop-Upgrade kann kostenlos gekauft werden</div>
+            <div class="btn-cost" id="admin-free-upgrades-status">Deaktiviert</div>
+          </button>
         </div>
       </div>
     </div>

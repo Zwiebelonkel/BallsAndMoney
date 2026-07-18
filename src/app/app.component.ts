@@ -3,15 +3,23 @@ import { PrestigePanelComponent } from './prestige-panel.component';
 import { SettingsPanelComponent } from './settings-panel.component';
 import { BallsPanelComponent } from './balls-panel.component';
 import { LeaderboardPanelComponent } from './leaderboard-panel.component';
+import { AchievementPanelComponent } from './achievement-panel.component';
+import { AchievementService } from './achievement.service';
+import { GameStorageService } from './game-storage.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [PrestigePanelComponent, SettingsPanelComponent, BallsPanelComponent, LeaderboardPanelComponent],
+  imports: [PrestigePanelComponent, SettingsPanelComponent, BallsPanelComponent, LeaderboardPanelComponent, AchievementPanelComponent],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
   private cleanupCallbacks: Array<() => void> = [];
+
+  constructor(
+    private readonly storage: GameStorageService,
+    private readonly achievementService: AchievementService
+  ) {}
 
   ngAfterViewInit(): void {
     this.startGame();
@@ -24,6 +32,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   private startGame(): void {
+    const storage = this.storage;
+    const achievementService = this.achievementService;
     const getElementById = <T extends HTMLElement>(id: string): T =>
       document.getElementById(id) as T;
 
@@ -106,8 +116,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     blockBrowserZoom();
-
-    const SAVE_KEY = 'ballsAndMoneySave';
 
     const preferences = {
       theme: 'dark',
@@ -228,6 +236,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       launch: 0,
       border: 0
     };
+    let adminFreeUpgrades = false;
 
     function getCost(key, level){
       const config = upgradeConfig[key];
@@ -342,7 +351,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function saveGame(){
-      localStorage.setItem(SAVE_KEY, JSON.stringify(getSaveData()));
+      storage.save(getSaveData());
     }
 
     function queueSave(){
@@ -352,15 +361,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function loadGame(){
-      const raw = localStorage.getItem(SAVE_KEY);
+      const data = storage.load<any>();
 
-      if(!raw){
+      if(!data){
         return false;
       }
 
       try{
-        const data = JSON.parse(raw);
-
         if(data.state && Number.isFinite(data.state.coins)){
           state.coins = data.state.coins;
         }
@@ -442,13 +449,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         return true;
       } catch(error){
         console.error('Spielstand konnte nicht geladen werden.', error);
-        localStorage.removeItem(SAVE_KEY);
+        storage.clear();
         return false;
       }
     }
 
     function resetGame(){
-      localStorage.removeItem(SAVE_KEY);
+      storage.clear();
+      achievementService.reset();
       state.coins = 0;
       state.colPerSec = 0;
       state.moneyPerSec = 0;
@@ -768,6 +776,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       ballsPanelDirty = true;
       updateHintMsg();
+      evaluateAchievements();
       queueSave();
     }
 
@@ -939,6 +948,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         spawnFloat(x, y, earnedCoins);
       }
       updateCoinsUI();
+      evaluateAchievements();
     }
 
     function clearFloatTexts(){
@@ -1835,7 +1845,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       updateCoinsUI();
       renderBallsPanel();
       updateLeaderboardScoreUI();
+      evaluateAchievements();
       queueSave();
+    }
+
+    function evaluateAchievements(){
+      achievementService.evaluate({
+        coins: state.coins,
+        balls: objects.length,
+        collisions: objects.reduce((sum, ball) => sum + (ball.collisions || 0), 0),
+        upgradeLevels: Object.values(upgrades).reduce((sum, level) => sum + level, 0),
+        prestige: state.prestige || 0
+      });
     }
 
     function updateButtons(){
@@ -1853,15 +1874,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         const maxed = cost === Infinity;
 
-        button.disabled =
-          maxed ||
-          coins < cost;
+        button.disabled = maxed || (!adminFreeUpgrades && coins < cost);
 
         button.className =
           'upgrade-btn' +
           (
             !maxed &&
-            coins >= cost
+            (adminFreeUpgrades || coins >= cost)
               ? ' can-afford'
               : ''
           );
@@ -1870,7 +1889,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           costElement.textContent = 'MAX ✓';
           costElement.className = 'btn-cost maxed';
         } else {
-          costElement.textContent = formatCompactNumber(cost) + ' 🪙';
+          costElement.textContent = adminFreeUpgrades ? 'KOSTENLOS · ' + formatCompactNumber(cost) + ' 🪙' : formatCompactNumber(cost) + ' 🪙';
           costElement.className = 'btn-cost';
         }
       }
@@ -2001,12 +2020,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     function buy(cost, action){
       if(
         !Number.isFinite(cost) ||
-        state.coins < cost
+        (!adminFreeUpgrades && state.coins < cost)
       ){
         return;
       }
 
-      state.coins -= cost;
+      if(!adminFreeUpgrades){
+        state.coins -= cost;
+      }
 
       action();
       updateUI();
@@ -2150,6 +2171,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const closeSettingsPanel = bindSlidePanel('btn-settings-toggle', 'settings-panel', 'btn-settings-close');
     bindSlidePanel('btn-balls-toggle', 'balls-panel', 'btn-balls-close');
     bindSlidePanel('btn-admin-toggle', 'admin-panel', 'btn-admin-close');
+    bindSlidePanel('btn-achievements', 'achievement-panel', 'btn-achievements-close');
     bindSlidePanel('btn-leaderboard', 'leaderboard-panel', 'btn-leaderboard-close', openLeaderboard);
 
     document
@@ -2283,6 +2305,20 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         grantAdminMoney();
         closeSettingsPanel();
+      });
+
+    document
+      .getElementById('btn-admin-free-upgrades')
+      .addEventListener('click', event => {
+        if(!adminUnlocked){
+          return;
+        }
+
+        adminFreeUpgrades = !adminFreeUpgrades;
+        const button = event.currentTarget as HTMLButtonElement;
+        button.setAttribute('aria-pressed', String(adminFreeUpgrades));
+        document.getElementById('admin-free-upgrades-status').textContent = adminFreeUpgrades ? 'Aktiviert' : 'Deaktiviert';
+        updateButtons();
       });
 
     document
