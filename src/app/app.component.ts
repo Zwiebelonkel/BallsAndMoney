@@ -46,6 +46,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let H = 0;
     let objects = [];
     let replacementBalls = [];
+    let moneyAreas = [];
+    let moneyAreaIndex = 0;
     let ballsPanelDirty = true;
     let lastBallsPanelRender = 0;
 
@@ -207,7 +209,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       cap: 0,
       combo: 0,
       launch: 0,
-      border: 0
+      border: 0,
+      moneyAreaCount: 0,
+      moneyAreaValue: 0
     };
     let adminFreeUpgrades = false;
 
@@ -287,6 +291,35 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       return upgrades.combo;
     }
 
+    function getMoneyAreaValue(){
+      return Math.ceil((
+        parameters.rewards.moneyAreaBaseValue +
+        upgrades.moneyAreaValue * parameters.rewards.moneyAreaValuePerUpgrade
+      ) * getGlobalMoneyMult());
+    }
+
+    function createMoneyArea(){
+      const radius = parameters.rewards.moneyAreaRadius;
+
+      return {
+        id: moneyAreaIndex++,
+        x: radius + Math.random() * Math.max(1, W - radius * 2),
+        y: radius + Math.random() * Math.max(1, H - radius * 2),
+        r: radius,
+        lastHits: {}
+      };
+    }
+
+    function syncMoneyAreas(){
+      while(moneyAreas.length < upgrades.moneyAreaCount){
+        moneyAreas.push(createMoneyArea());
+      }
+
+      if(moneyAreas.length > upgrades.moneyAreaCount){
+        moneyAreas = moneyAreas.slice(0, upgrades.moneyAreaCount);
+      }
+    }
+
     function getLaunchPowerMultiplier(){
       return parameters.balls.baseLaunchMultiplier * Math.pow(parameters.balls.launchGrowth, upgrades.launch);
     }
@@ -324,6 +357,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         },
         hueIdx,
         objectIndex,
+        moneyAreaIndex,
+        moneyAreas: moneyAreas.map(area => ({
+          id: area.id,
+          x: area.x,
+          y: area.y,
+          r: area.r
+        })),
         replacementBalls: replacementBalls.map(ball => ({
           id: ball.id,
           r: ball.r,
@@ -430,6 +470,26 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         hueIdx = Number.isFinite(data.hueIdx) ? data.hueIdx : hueIdx;
         objectIndex = Number.isFinite(data.objectIndex) ? data.objectIndex : objectIndex;
+        moneyAreaIndex = Number.isFinite(data.moneyAreaIndex) ? data.moneyAreaIndex : moneyAreaIndex;
+
+        if(Array.isArray(data.moneyAreas)){
+          moneyAreas = data.moneyAreas
+            .filter(area => Number.isFinite(area.x) && Number.isFinite(area.y))
+            .map(area => ({
+              id: Number.isFinite(area.id) ? area.id : moneyAreaIndex++,
+              x: area.x * savedArenaScaleX,
+              y: area.y * savedArenaScaleY,
+              r: Number.isFinite(area.r) ? area.r : parameters.rewards.moneyAreaRadius,
+              lastHits: {}
+            }));
+
+          for(const area of moneyAreas){
+            area.x = Math.max(area.r, Math.min(W - area.r, area.x));
+            area.y = Math.max(area.r, Math.min(H - area.r, area.y));
+          }
+        }
+
+        syncMoneyAreas();
 
         if(Array.isArray(data.objects)){
           objects = data.objects
@@ -507,7 +567,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       baseMultiplierBonus: 'Global-Bonus je Prestige', overflowStep: 'Overflow-Schritt', overflowBonus: 'Overflow-Bonus', overflowMaxBonus: 'Overflow-Bonus max.', costGrowth: 'Kosten-Wachstum',
       frameMs: 'Frame ms', maxSimulationDelta: 'Max. Simulations-Delta', maxCatchUpMs: 'Max. Catch-up ms', maxDevicePixelRatio: 'Max. Pixel Ratio',
       floatMergeDistance: 'Popup-Merge Distanz', floatMergeWindowMs: 'Popup-Merge Fenster', graphLength: 'Graph-Länge', dashboardSampleMs: 'Dashboard Sample ms', autosaveMs: 'Autosave ms', saveDebounceMs: 'Save Debounce ms', floatLifetimeMs: 'Popup-Lebensdauer ms', comboPillLifetimeMs: 'Combo-Anzeige ms',
-      moneyGrant: 'Geld geben'
+      moneyGrant: 'Geld geben',
+      moneyAreaBaseValue: 'Money-Area Basiswert', moneyAreaValuePerUpgrade: 'Money-Area Wert je Level', moneyAreaRadius: 'Money-Area Radius', moneyAreaCooldownMs: 'Money-Area Cooldown (ms)'
     };
 
     function setParameterValue(path, value){
@@ -574,6 +635,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       preferences.moneyPopupsVisible = true;
       objects = [];
       replacementBalls = [];
+      moneyAreas = [];
+      moneyAreaIndex = 0;
       ballsPanelDirty = true;
       objectIndex = 0;
       hueIdx = 0;
@@ -994,6 +1057,46 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     /* Belohnungen */
 
+    function checkMoneyAreas(ball){
+      if(moneyAreas.length === 0){
+        return;
+      }
+
+      const now = performance.now();
+
+      for(const area of moneyAreas){
+        const dx = ball.x - area.x;
+        const dy = ball.y - area.y;
+        const reach = ball.r + area.r;
+
+        if(dx * dx + dy * dy > reach * reach){
+          continue;
+        }
+
+        const lastHit = area.lastHits[ball.id] || 0;
+
+        if(now - lastHit < parameters.rewards.moneyAreaCooldownMs){
+          continue;
+        }
+
+        area.lastHits[ball.id] = now;
+        grantMoneyAt(area.x, area.y, getMoneyAreaValue());
+      }
+    }
+
+    function grantMoneyAt(x, y, amount){
+      const earnedCoins = Math.max(1, Math.ceil(amount));
+      state.coins += earnedCoins;
+      state.moneyCount += earnedCoins;
+
+      if(preferences.moneyPopupsVisible){
+        spawnFloat(x, y, earnedCoins);
+      }
+
+      updateCoinsUI();
+      evaluateAchievements();
+    }
+
     function onCollision(x, y, rewardScale = 1){
       state.colCount++;
 
@@ -1036,14 +1139,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       earnedCoins = Math.ceil(earnedCoins);
 
-      state.coins += earnedCoins;
-      state.moneyCount += earnedCoins;
-
-      if(preferences.moneyPopupsVisible){
-        spawnFloat(x, y, earnedCoins);
-      }
-      updateCoinsUI();
-      evaluateAchievements();
+      grantMoneyAt(x, y, earnedCoins);
     }
 
     function clearFloatTexts(){
@@ -1134,6 +1230,41 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         ctx.lineTo(W, y);
         ctx.stroke();
       }
+    }
+
+    function drawMoneyAreas(){
+      if(moneyAreas.length === 0){
+        return;
+      }
+
+      const value = getMoneyAreaValue();
+
+      ctx.save();
+
+      for(const area of moneyAreas){
+        const gradient = ctx.createRadialGradient(area.x, area.y, 2, area.x, area.y, area.r);
+        const inner = preferences.colorMode === 'mono' ? getMonoSoftColor(0.28) : 'rgba(250,199,117,0.34)';
+        const outer = preferences.colorMode === 'mono' ? getMonoSoftColor(0.02) : 'rgba(250,199,117,0.02)';
+        gradient.addColorStop(0, inner);
+        gradient.addColorStop(1, outer);
+
+        ctx.beginPath();
+        ctx.arc(area.x, area.y, area.r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.strokeStyle = preferences.colorMode === 'mono' ? getMonoSoftColor(0.42) : 'rgba(250,199,117,0.62)';
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = preferences.colorMode === 'mono' ? getMonoInkColor() : '#FAC775';
+        ctx.font = '10px ui-monospace,monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('+' + formatCompactNumber(value), area.x, area.y + 3);
+      }
+
+      ctx.restore();
     }
 
     function drawBorders(){
@@ -1307,6 +1438,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         ball.y += ball.vy * delta;
 
         wallBounce(ball);
+        checkMoneyAreas(ball);
 
         if(shouldDraw && preferences.ballTrailsVisible){
           ball.trail.push({
@@ -1347,6 +1479,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       ctx.fillRect(0, 0, W, H);
 
       drawGrid();
+      drawMoneyAreas();
       drawBorders();
 
       for(const ball of objects){
@@ -2022,6 +2155,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         'cost-border'
       );
 
+      updateUpgradeButton(
+        'moneyAreaCount',
+        'btn-money-area-count',
+        'cost-money-area-count'
+      );
+
+      updateUpgradeButton(
+        'moneyAreaValue',
+        'btn-money-area-value',
+        'cost-money-area-value'
+      );
+
       const prestigeButton = getElementById<HTMLButtonElement>('btn-prestige');
       const prestigeCostElement = document.getElementById('cost-prestige');
       const prestigeCost = getPrestigeCost();
@@ -2084,6 +2229,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       objects = [];
       replacementBalls = [];
+      moneyAreas = [];
+      moneyAreaIndex = 0;
       ballsPanelDirty = true;
       objectIndex = 0;
       hueIdx = 0;
@@ -2192,6 +2339,29 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         buy(cost, () => {
           upgrades.border++;
+        });
+      });
+
+    document
+      .getElementById('btn-money-area-count')
+      .addEventListener('click', () => {
+        const level = upgrades.moneyAreaCount;
+        const cost = getCost('moneyAreaCount', level);
+
+        buy(cost, () => {
+          upgrades.moneyAreaCount++;
+          syncMoneyAreas();
+        });
+      });
+
+    document
+      .getElementById('btn-money-area-value')
+      .addEventListener('click', () => {
+        const level = upgrades.moneyAreaValue;
+        const cost = getCost('moneyAreaValue', level);
+
+        buy(cost, () => {
+          upgrades.moneyAreaValue++;
         });
       });
 
