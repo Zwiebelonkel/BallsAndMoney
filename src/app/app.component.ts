@@ -280,15 +280,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function getMaxBalls(){
-      const baseCapacity = parameters.balls.baseCapacity;
-      const softcapStart = parameters.balls.softcapStart;
-      const uncappedMaxBalls = baseCapacity + upgrades.cap;
-
-      if(uncappedMaxBalls <= softcapStart){
-        return uncappedMaxBalls;
-      }
-
-      return softcapStart + Math.floor((uncappedMaxBalls - softcapStart) * parameters.balls.softcapFactor);
+      return parameters.balls.baseCapacity + upgrades.cap;
     }
 
     function getComboLevel(){
@@ -510,7 +502,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     const PARAMETER_LABELS = {
       baseCost: 'Basis-Kosten', growth: 'Kosten-Wachstum', tierGrowthStart: 'Tier-Wachstum ab Level', tierGrowth: 'Tier-Wachstum', maxLevel: 'Max. Level',
-      baseCapacity: 'Basis-Kapazität', softcapStart: 'Softcap ab Kugeln', softcapFactor: 'Softcap-Faktor', baseRadius: 'Basis-Radius', radiusPerSizeUpgrade: 'Radius pro Größe-Level', randomRadiusMin: 'Radius-Zufall min.', randomRadiusMax: 'Radius-Zufall max.', massFactor: 'Masse-Faktor', arenaScaleBallsPerTier: 'Arena-Skalierung alle Kugeln', arenaScalePerTier: 'Arena-Skalierung pro Tier', baseLaunchMultiplier: 'Launch-Basis', launchGrowth: 'Launch-Wachstum', randomShotMinSpeed: 'Zufallsschuss min.', randomShotSpeedRange: 'Zufallsschuss Spannweite', aimedShotMaxSpeed: 'Gezielter Schuss max.', maxDrag: 'Max. Drag', tapShotThreshold: 'Tap-Schwelle', trailLength: 'Trail-Länge',
+      baseCapacity: 'Basis-Kapazität', baseRadius: 'Basis-Radius', radiusPerSizeUpgrade: 'Radius pro Größe-Level', randomRadiusMin: 'Radius-Zufall min.', randomRadiusMax: 'Radius-Zufall max.', massFactor: 'Masse-Faktor', arenaScaleBallsPerTier: 'Arena-Skalierung alle Kugeln', arenaScalePerTier: 'Arena-Skalierung pro Tier', baseLaunchMultiplier: 'Launch-Basis', launchGrowth: 'Launch-Wachstum', randomShotMinSpeed: 'Zufallsschuss min.', randomShotSpeedRange: 'Zufallsschuss Spannweite', aimedShotMaxSpeed: 'Gezielter Schuss max.', maxDrag: 'Max. Drag', tapShotThreshold: 'Tap-Schwelle', trailLength: 'Trail-Länge',
       multiplierPerUpgrade: 'Multiplikator je Level', starterCollisionCount: 'Starter-Kollisionen', starterCollisionBonus: 'Starter-Bonus', borderCollisionValue: 'Border-Wert', comboWindowMs: 'Combo-Fenster (ms)', comboBaseMax: 'Combo-Max Basis', comboBonusScale: 'Combo-Bonus Skalierung', comboLevelExponent: 'Combo-Level Exponent', comboMinimumCount: 'Combo ab Anzahl',
       baseMultiplierBonus: 'Global-Bonus je Prestige', overflowStep: 'Overflow-Schritt', overflowBonus: 'Overflow-Bonus', overflowMaxBonus: 'Overflow-Bonus max.', costGrowth: 'Kosten-Wachstum',
       frameMs: 'Frame ms', maxSimulationDelta: 'Max. Simulations-Delta', maxCatchUpMs: 'Max. Catch-up ms', maxDevicePixelRatio: 'Max. Pixel Ratio',
