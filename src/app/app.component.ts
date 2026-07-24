@@ -196,34 +196,37 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       colCount: 0,
       moneyCount: 0,
       prestige: 0,
+      prestigeBonus: 0,
       comboCount: 0,
       lastComboT: 0
     };
 
     const upgradeConfig = {
       size: {
-        baseCost: 90,
-        growth: 2.25
-      },
-      mult: {
-        baseCost: 180,
-        growth: 1.9
-      },
-      cap: {
-        baseCost: 260,
-        growth: 1.85
-      },
-      combo: {
-        baseCost: 320,
-        growth: 2.05
-      },
-      launch: {
-        baseCost: 110,
+        baseCost: 55,
         growth: 2.15
       },
+      mult: {
+        baseCost: 95,
+        growth: 1.95
+      },
+      cap: {
+        baseCost: 120,
+        growth: 2.35,
+        tierGrowthStart: 4,
+        tierGrowth: 1.35
+      },
+      combo: {
+        baseCost: 550,
+        growth: 2.35
+      },
+      launch: {
+        baseCost: 70,
+        growth: 2.1
+      },
       border: {
-        baseCost: 25000,
-        growth: 8,
+        baseCost: 85000,
+        growth: 9,
         maxLevel: 4
       }
     };
@@ -250,8 +253,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         return Infinity;
       }
 
+      const tierPenalty = Number.isFinite(config.tierGrowthStart)
+        ? Math.pow(config.tierGrowth, Math.max(0, level - config.tierGrowthStart + 1))
+        : 1;
+
       return Math.round(
-        config.baseCost * Math.pow(config.growth, level)
+        config.baseCost * Math.pow(config.growth, level) * tierPenalty
       );
     }
 
@@ -273,29 +280,50 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    const PRESTIGE_MONEY_THRESHOLD = 5000000;
-    const MONEY_BONUS_STEP = 1000000;
-    const MONEY_BONUS_PER_STEP = 0.03;
+    const PRESTIGE_BASE_COST = 2500000;
+    const PRESTIGE_COST_GROWTH = 3.2;
+    const PRESTIGE_BASE_MULT_BONUS = 0.35;
+    const PRESTIGE_OVERFLOW_STEP = 1000000;
+    const PRESTIGE_OVERFLOW_BONUS = 0.03;
+    const PRESTIGE_OVERFLOW_MAX_BONUS = 0.45;
+    const STARTER_COLLISION_COUNT = 40;
+    const STARTER_COLLISION_BONUS = 1.5;
+    const BORDER_COLLISION_VALUE = 0.35;
 
-    function getMoneyProgressionBonus(){
-      const extraMillions = Math.floor(
-        Math.max(0, (state.coins || 0) - PRESTIGE_MONEY_THRESHOLD) /
-          MONEY_BONUS_STEP
+    function getPrestigeOverflowBonus(){
+      const prestigeCost = getPrestigeCost();
+      const overflowSteps = Math.floor(
+        Math.max(0, (state.coins || 0) - prestigeCost) / PRESTIGE_OVERFLOW_STEP
       );
 
-      return extraMillions * MONEY_BONUS_PER_STEP;
+      return Math.min(
+        PRESTIGE_OVERFLOW_MAX_BONUS,
+        overflowSteps * PRESTIGE_OVERFLOW_BONUS
+      );
     }
 
     function getGlobalMoneyMult(){
-      return 1 + (state.prestige || 0) * 0.35 + getMoneyProgressionBonus();
+      return 1 + (state.prestige || 0) * PRESTIGE_BASE_MULT_BONUS + (state.prestigeBonus || 0);
+    }
+
+    function getStarterMoneyMult(){
+      return state.colCount < STARTER_COLLISION_COUNT ? STARTER_COLLISION_BONUS : 1;
     }
 
     function getCoinMult(){
-      return (1 + upgrades.mult * 0.55) * getGlobalMoneyMult();
+      return (1 + upgrades.mult * 0.45) * getGlobalMoneyMult() * getStarterMoneyMult();
     }
 
     function getMaxBalls(){
-      return 4 + upgrades.cap;
+      const baseCapacity = 4;
+      const softcapStart = 8;
+      const uncappedMaxBalls = baseCapacity + upgrades.cap;
+
+      if(uncappedMaxBalls <= softcapStart){
+        return uncappedMaxBalls;
+      }
+
+      return softcapStart + Math.floor((uncappedMaxBalls - softcapStart) * 0.5);
     }
 
     function getComboLevel(){
@@ -327,7 +355,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         version: 1,
         state: {
           coins: state.coins,
-          prestige: state.prestige || 0
+          prestige: state.prestige || 0,
+          prestigeBonus: state.prestigeBonus || 0
         },
         upgrades: { ...upgrades },
         preferences: { ...preferences },
@@ -387,6 +416,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         if(data.state && Number.isFinite(data.state.prestige)){
           state.prestige = data.state.prestige;
+        }
+
+        if(data.state && Number.isFinite(data.state.prestigeBonus)){
+          state.prestigeBonus = data.state.prestigeBonus;
         }
 
         if(data.upgrades){
@@ -476,6 +509,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       state.colCount = 0;
       state.moneyCount = 0;
       state.prestige = 0;
+      state.prestigeBonus = 0;
       state.comboCount = 0;
       state.lastComboT = 0;
 
@@ -835,7 +869,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         if(isBorderSideActive(hit.side)){
           ball.collisions++;
           ballsPanelDirty = true;
-          onCollision(hit.x, hit.y);
+          onCollision(hit.x, hit.y, BORDER_COLLISION_VALUE);
         }
       }
     }
@@ -912,19 +946,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     /* Belohnungen */
 
-    function onCollision(x, y){
+    function onCollision(x, y, rewardScale = 1){
       state.colCount++;
 
       const now = performance.now();
 
-      let earnedCoins = getCoinMult();
+      let earnedCoins = getCoinMult() * rewardScale;
 
       if(getComboLevel() > 0){
 
         if(now - state.lastComboT < 600){
           state.comboCount = Math.min(
             state.comboCount + 1,
-            20
+            12
           );
         } else {
           state.comboCount = 1;
@@ -935,9 +969,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         if(state.comboCount >= 3){
           const bonus =
             1 +
-            (state.comboCount - 2) *
-            0.1 *
-            getComboLevel();
+            Math.log2(state.comboCount - 1) *
+            0.12 *
+            Math.sqrt(getComboLevel());
 
           earnedCoins *= bonus;
 
@@ -1968,11 +2002,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function getPrestigeCost(){
-      return 5000000;
+      return Math.round(PRESTIGE_BASE_COST * Math.pow(PRESTIGE_COST_GROWTH, state.prestige || 0));
     }
 
     function getNextGlobalMoneyMult(){
-      return 1 + ((state.prestige || 0) + 1) * 0.35;
+      return getGlobalMoneyMult() + PRESTIGE_BASE_MULT_BONUS + getPrestigeOverflowBonus();
     }
 
     function performPrestige(){
@@ -1989,6 +2023,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         return false;
       }
 
+      state.prestigeBonus = (state.prestigeBonus || 0) + getPrestigeOverflowBonus();
       state.prestige = (state.prestige || 0) + 1;
       state.coins = 0;
       state.colPerSec = 0;
