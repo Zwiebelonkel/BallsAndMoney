@@ -32,7 +32,7 @@ import { Component } from '@angular/core';
         <div class="admin-actions" id="admin-actions" hidden>
           <div class="prestige-details">
             <div>Status: <strong>Freigeschaltet</strong></div>
-            <div>Aktion: <strong>+1.000.000 🪙</strong></div>
+            <div>Parameter: <strong>Upgrade-Kosten, Wachstum, Physik, Rewards und UI</strong></div>
           </div>
 
           <button class="upgrade-btn can-afford" id="btn-admin-money" type="button">
@@ -46,6 +46,16 @@ import { Component } from '@angular/core';
             <div class="btn-desc">Jedes Shop-Upgrade kann kostenlos gekauft werden</div>
             <div class="btn-cost" id="admin-free-upgrades-status">Deaktiviert</div>
           </button>
+
+          <div class="admin-parameter-box">
+            <div class="section-label">Parameter</div>
+            <div class="admin-message" id="admin-parameters-message" role="status">Änderungen werden sofort gespeichert.</div>
+            <div class="admin-parameters-list" id="admin-parameters-list"></div>
+            <button class="setting-btn danger" id="btn-admin-reset-parameters" type="button">
+              Parameter zurücksetzen
+              <span class="setting-value">Standardwerte wiederherstellen</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
