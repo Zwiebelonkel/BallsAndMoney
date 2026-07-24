@@ -698,6 +698,10 @@ app-balls-panel{
   width:min(520px,calc(100vw - 28px));
 }
 
+.balls-panel-card .panel-close{
+  display:none;
+}
+
 .balls-summary{
   margin-bottom:8px;
   padding:8px;
