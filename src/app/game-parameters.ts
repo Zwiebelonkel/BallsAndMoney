@@ -9,8 +9,6 @@ export const DEFAULT_GAME_PARAMETERS = {
   },
   balls: {
     baseCapacity: 4,
-    softcapStart: 8,
-    softcapFactor: 0.5,
     baseRadius: 14,
     radiusPerSizeUpgrade: 1.5,
     randomRadiusMin: 0.85,
@@ -40,7 +38,7 @@ export const DEFAULT_GAME_PARAMETERS = {
   },
   prestige: {
     baseCost: 2500000,
-    costGrowth: 3.2,
+    costGrowth: 2.2,
     baseMultiplierBonus: 0.35,
     overflowStep: 1000000,
     overflowBonus: 0.03,
