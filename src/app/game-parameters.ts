@@ -5,7 +5,9 @@ export const DEFAULT_GAME_PARAMETERS = {
     cap: { baseCost: 120, growth: 2.35, tierGrowthStart: 4, tierGrowth: 1.35 },
     combo: { baseCost: 280, growth: 1.58 },
     launch: { baseCost: 70, growth: 2.1 },
-    border: { baseCost: 85000, growth: 9, maxLevel: 4 }
+    border: { baseCost: 85000, growth: 9, maxLevel: 4 },
+    moneyAreaCount: { baseCost: 650, growth: 2.4, maxLevel: 8 },
+    moneyAreaValue: { baseCost: 1100, growth: 2.05 }
   },
   balls: {
     baseCapacity: 4,
@@ -30,6 +32,10 @@ export const DEFAULT_GAME_PARAMETERS = {
     starterCollisionCount: 40,
     starterCollisionBonus: 1.5,
     borderCollisionValue: 0.35,
+    moneyAreaBaseValue: 8,
+    moneyAreaValuePerUpgrade: 7,
+    moneyAreaRadius: 34,
+    moneyAreaCooldownMs: 650,
     comboWindowMs: 750,
     comboBaseMax: 12,
     comboBonusScale: 0.16,
