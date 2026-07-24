@@ -273,8 +273,21 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
     }
 
+    const PRESTIGE_MONEY_THRESHOLD = 5000000;
+    const MONEY_BONUS_STEP = 1000000;
+    const MONEY_BONUS_PER_STEP = 0.03;
+
+    function getMoneyProgressionBonus(){
+      const extraMillions = Math.floor(
+        Math.max(0, (state.coins || 0) - PRESTIGE_MONEY_THRESHOLD) /
+          MONEY_BONUS_STEP
+      );
+
+      return extraMillions * MONEY_BONUS_PER_STEP;
+    }
+
     function getGlobalMoneyMult(){
-      return 1 + (state.prestige || 0) * 0.35;
+      return 1 + (state.prestige || 0) * 0.35 + getMoneyProgressionBonus();
     }
 
     function getCoinMult(){
