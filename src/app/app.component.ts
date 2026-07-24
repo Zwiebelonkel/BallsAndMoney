@@ -207,8 +207,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         growth: 2.15
       },
       mult: {
-        baseCost: 95,
-        growth: 1.95
+        baseCost: 80,
+        growth: 1.62
       },
       cap: {
         baseCost: 120,
@@ -217,8 +217,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         tierGrowth: 1.35
       },
       combo: {
-        baseCost: 550,
-        growth: 2.35
+        baseCost: 280,
+        growth: 1.58
       },
       launch: {
         baseCost: 70,
@@ -311,7 +311,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function getCoinMult(){
-      return (1 + upgrades.mult * 0.45) * getGlobalMoneyMult() * getStarterMoneyMult();
+      return (1 + upgrades.mult * 0.6) * getGlobalMoneyMult() * getStarterMoneyMult();
     }
 
     function getMaxBalls(){
@@ -955,10 +955,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       if(getComboLevel() > 0){
 
-        if(now - state.lastComboT < 600){
+        if(now - state.lastComboT < 750){
           state.comboCount = Math.min(
             state.comboCount + 1,
-            12
+            12 + getComboLevel()
           );
         } else {
           state.comboCount = 1;
@@ -970,8 +970,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           const bonus =
             1 +
             Math.log2(state.comboCount - 1) *
-            0.12 *
-            Math.sqrt(getComboLevel());
+            0.16 *
+            Math.pow(getComboLevel(), 0.72);
 
           earnedCoins *= bonus;
 
