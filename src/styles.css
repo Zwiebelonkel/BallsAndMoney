@@ -1046,3 +1046,44 @@ app-achievement-panel{
   color:var(--muted-strong);
   font:10px/1.35 ui-monospace,monospace;
 }
+
+.admin-parameter-box{
+  display:grid;
+  gap:8px;
+}
+
+.admin-parameters-list{
+  display:grid;
+  gap:8px;
+}
+
+.admin-parameter-group{
+  display:grid;
+  gap:6px;
+  padding:8px;
+  border:0.5px solid var(--border-soft);
+  border-radius:8px;
+  background:var(--surface-soft);
+}
+
+.admin-parameter-title{
+  color:var(--accent);
+  font-size:10px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.admin-parameter-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 96px;
+  align-items:center;
+  gap:8px;
+  color:var(--muted-strong);
+  font-size:10px;
+}
+
+.admin-parameter-row .admin-input{
+  padding:6px 7px;
+  font-size:11px;
+}

@@ -6,6 +6,7 @@ import { LeaderboardPanelComponent } from './leaderboard-panel.component';
 import { AchievementPanelComponent } from './achievement-panel.component';
 import { AchievementService } from './achievement.service';
 import { GameStorageService } from './game-storage.service';
+import { DEFAULT_GAME_PARAMETERS, cloneGameParameters } from './game-parameters';
 
 @Component({
   selector: 'app-root',
@@ -48,11 +49,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let ballsPanelDirty = true;
     let lastBallsPanelRender = 0;
 
-    const FLOAT_MERGE_DISTANCE = 80;
-    const FLOAT_MERGE_WINDOW_MS = 180;
+    const parameters = cloneGameParameters();
     const activeFloatTexts = [];
-
-    const MAX_DEVICE_PIXEL_RATIO = 2;
 
     function setInitialCanvasSize(){
       if(window.matchMedia('(max-width: 720px)').matches){
@@ -70,7 +68,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       const devicePixelRatio = Math.min(
         window.devicePixelRatio || 1,
-        MAX_DEVICE_PIXEL_RATIO
+        parameters.physics.maxDevicePixelRatio
       );
 
       canvas.width = Math.round(W * devicePixelRatio);
@@ -201,35 +199,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       lastComboT: 0
     };
 
-    const upgradeConfig = {
-      size: {
-        baseCost: 55,
-        growth: 2.15
-      },
-      mult: {
-        baseCost: 80,
-        growth: 1.62
-      },
-      cap: {
-        baseCost: 120,
-        growth: 2.35,
-        tierGrowthStart: 4,
-        tierGrowth: 1.35
-      },
-      combo: {
-        baseCost: 280,
-        growth: 1.58
-      },
-      launch: {
-        baseCost: 70,
-        growth: 2.1
-      },
-      border: {
-        baseCost: 85000,
-        growth: 9,
-        maxLevel: 4
-      }
-    };
+    const upgradeConfig = parameters.upgrades;
 
     const upgrades = {
       size: 0,
@@ -263,67 +233,62 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function getArenaScale(ballCount = objects.length){
-      return 1 + Math.floor(ballCount / 8) * 0.18;
+      return 1 + Math.floor(ballCount / parameters.balls.arenaScaleBallsPerTier) * parameters.balls.arenaScalePerTier;
     }
 
     function getBaseR(ballCount = objects.length){
-      return (14 + upgrades.size * 1.5) / getArenaScale(ballCount);
+      return (parameters.balls.baseRadius + upgrades.size * parameters.balls.radiusPerSizeUpgrade) / getArenaScale(ballCount);
+    }
+
+    function getRandomRadiusMultiplier(){
+      return parameters.balls.randomRadiusMin + Math.random() * (parameters.balls.randomRadiusMax - parameters.balls.randomRadiusMin);
     }
 
     function resizeBallsToCurrentArena(){
       for(const ball of objects){
-        ball.r = getBaseR() * (0.85 + Math.random() * 0.3);
-        ball.m = ball.r * ball.r * 0.01;
+        ball.r = getBaseR() * getRandomRadiusMultiplier();
+        ball.m = ball.r * ball.r * parameters.balls.massFactor;
         ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x));
         ball.y = Math.max(ball.r, Math.min(H - ball.r, ball.y));
         ball.trail = [];
       }
     }
 
-    const PRESTIGE_BASE_COST = 2500000;
-    const PRESTIGE_COST_GROWTH = 3.2;
-    const PRESTIGE_BASE_MULT_BONUS = 0.35;
-    const PRESTIGE_OVERFLOW_STEP = 1000000;
-    const PRESTIGE_OVERFLOW_BONUS = 0.03;
-    const PRESTIGE_OVERFLOW_MAX_BONUS = 0.45;
-    const STARTER_COLLISION_COUNT = 40;
-    const STARTER_COLLISION_BONUS = 1.5;
-    const BORDER_COLLISION_VALUE = 0.35;
 
     function getPrestigeOverflowBonus(){
       const prestigeCost = getPrestigeCost();
       const overflowSteps = Math.floor(
-        Math.max(0, (state.coins || 0) - prestigeCost) / PRESTIGE_OVERFLOW_STEP
+        Math.max(0, (state.coins || 0) - prestigeCost) / parameters.prestige.overflowStep
       );
 
       return Math.min(
-        PRESTIGE_OVERFLOW_MAX_BONUS,
-        overflowSteps * PRESTIGE_OVERFLOW_BONUS
+        parameters.prestige.overflowMaxBonus,
+        overflowSteps * parameters.prestige.overflowBonus
       );
     }
 
     function getGlobalMoneyMult(){
-      return 1 + (state.prestige || 0) * PRESTIGE_BASE_MULT_BONUS + (state.prestigeBonus || 0);
+      return 1 + (state.prestige || 0) * parameters.prestige.baseMultiplierBonus + (state.prestigeBonus || 0);
     }
 
     function getStarterMoneyMult(){
-      return state.colCount < STARTER_COLLISION_COUNT ? STARTER_COLLISION_BONUS : 1;
+      return state.colCount < parameters.rewards.starterCollisionCount ? parameters.rewards.starterCollisionBonus : 1;
     }
 
     function getCoinMult(){
-      return (1 + upgrades.mult * 0.6) * getGlobalMoneyMult() * getStarterMoneyMult();
+      return (1 + upgrades.mult * parameters.rewards.multiplierPerUpgrade) * getGlobalMoneyMult() * getStarterMoneyMult();
     }
 
     function getMaxBalls(){
-      const baseCapacity = 4;
-      const softcapStart = 8;
+      const baseCapacity = parameters.balls.baseCapacity;
+      const softcapStart = parameters.balls.softcapStart;
       const uncappedMaxBalls = baseCapacity + upgrades.cap;
 
       if(uncappedMaxBalls <= softcapStart){
         return uncappedMaxBalls;
       }
 
-      return softcapStart + Math.floor((uncappedMaxBalls - softcapStart) * 0.5);
+      return softcapStart + Math.floor((uncappedMaxBalls - softcapStart) * parameters.balls.softcapFactor);
     }
 
     function getComboLevel(){
@@ -331,7 +296,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function getLaunchPowerMultiplier(){
-      return 0.55 * Math.pow(1.18, upgrades.launch);
+      return parameters.balls.baseLaunchMultiplier * Math.pow(parameters.balls.launchGrowth, upgrades.launch);
     }
 
     const BORDER_SIDES = [
@@ -360,6 +325,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         },
         upgrades: { ...upgrades },
         preferences: { ...preferences },
+        parameters: JSON.parse(JSON.stringify(parameters)),
         arena: {
           w: W,
           h: H
@@ -399,7 +365,34 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     function queueSave(){
       clearTimeout(saveTimer);
 
-      saveTimer = setTimeout(saveGame, 250);
+      saveTimer = setTimeout(saveGame, parameters.ui.saveDebounceMs);
+    }
+
+
+    function mergeParameters(target, source){
+      for(const key of Object.keys(source || {})){
+        if(!(key in target)){
+          continue;
+        }
+
+        if(source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])){
+          mergeParameters(target[key], source[key]);
+          continue;
+        }
+
+        if(Number.isFinite(source[key])){
+          target[key] = source[key];
+        }
+      }
+    }
+
+    function resetParameters(){
+      mergeParameters(parameters, DEFAULT_GAME_PARAMETERS);
+      resizeBallsToCurrentArena();
+      updateHintMsg();
+      updateUI();
+      renderAdminParameters();
+      saveGame();
     }
 
     function loadGame(){
@@ -410,6 +403,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
 
       try{
+        if(data.parameters){
+          mergeParameters(parameters, data.parameters);
+        }
+
         if(data.state && Number.isFinite(data.state.coins)){
           state.coins = data.state.coins;
         }
@@ -452,7 +449,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
               vx: Number.isFinite(ball.vx) ? ball.vx : 0,
               vy: Number.isFinite(ball.vy) ? ball.vy : 0,
               r: Number.isFinite(ball.r) ? ball.r : getBaseR(),
-              m: Number.isFinite(ball.m) ? ball.m : getBaseR() * getBaseR() * 0.01,
+              m: Number.isFinite(ball.m) ? ball.m : getBaseR() * getBaseR() * parameters.balls.massFactor,
               col: ball.col || COLORS[hueIdx % COLORS.length],
               active: ball.active !== false,
               collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
@@ -475,7 +472,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             .map(ball => ({
               id: Number.isFinite(ball.id) ? ball.id : objectIndex++,
               r: ball.r,
-              m: Number.isFinite(ball.m) ? ball.m : ball.r * ball.r * 0.01,
+              m: Number.isFinite(ball.m) ? ball.m : ball.r * ball.r * parameters.balls.massFactor,
               col: ball.col || COLORS[hueIdx % COLORS.length],
               maxSpeed: Number.isFinite(ball.maxSpeed) ? ball.maxSpeed : 0,
               collisions: Number.isFinite(ball.collisions) ? ball.collisions : 0,
@@ -500,6 +497,65 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
     }
 
+
+    const PARAMETER_GROUP_LABELS = {
+      upgrades: 'Upgrade-Kosten',
+      balls: 'Kugeln & Launch',
+      rewards: 'Rewards & Combo',
+      prestige: 'Prestige',
+      physics: 'Physik',
+      ui: 'UI & Timing',
+      admin: 'Admin'
+    };
+
+    const PARAMETER_LABELS = {
+      baseCost: 'Basis-Kosten', growth: 'Kosten-Wachstum', tierGrowthStart: 'Tier-Wachstum ab Level', tierGrowth: 'Tier-Wachstum', maxLevel: 'Max. Level',
+      baseCapacity: 'Basis-Kapazität', softcapStart: 'Softcap ab Kugeln', softcapFactor: 'Softcap-Faktor', baseRadius: 'Basis-Radius', radiusPerSizeUpgrade: 'Radius pro Größe-Level', randomRadiusMin: 'Radius-Zufall min.', randomRadiusMax: 'Radius-Zufall max.', massFactor: 'Masse-Faktor', arenaScaleBallsPerTier: 'Arena-Skalierung alle Kugeln', arenaScalePerTier: 'Arena-Skalierung pro Tier', baseLaunchMultiplier: 'Launch-Basis', launchGrowth: 'Launch-Wachstum', randomShotMinSpeed: 'Zufallsschuss min.', randomShotSpeedRange: 'Zufallsschuss Spannweite', aimedShotMaxSpeed: 'Gezielter Schuss max.', maxDrag: 'Max. Drag', tapShotThreshold: 'Tap-Schwelle', trailLength: 'Trail-Länge',
+      multiplierPerUpgrade: 'Multiplikator je Level', starterCollisionCount: 'Starter-Kollisionen', starterCollisionBonus: 'Starter-Bonus', borderCollisionValue: 'Border-Wert', comboWindowMs: 'Combo-Fenster (ms)', comboBaseMax: 'Combo-Max Basis', comboBonusScale: 'Combo-Bonus Skalierung', comboLevelExponent: 'Combo-Level Exponent', comboMinimumCount: 'Combo ab Anzahl',
+      baseMultiplierBonus: 'Global-Bonus je Prestige', overflowStep: 'Overflow-Schritt', overflowBonus: 'Overflow-Bonus', overflowMaxBonus: 'Overflow-Bonus max.', costGrowth: 'Kosten-Wachstum',
+      frameMs: 'Frame ms', maxSimulationDelta: 'Max. Simulations-Delta', maxCatchUpMs: 'Max. Catch-up ms', maxDevicePixelRatio: 'Max. Pixel Ratio',
+      floatMergeDistance: 'Popup-Merge Distanz', floatMergeWindowMs: 'Popup-Merge Fenster', graphLength: 'Graph-Länge', dashboardSampleMs: 'Dashboard Sample ms', autosaveMs: 'Autosave ms', saveDebounceMs: 'Save Debounce ms', floatLifetimeMs: 'Popup-Lebensdauer ms', comboPillLifetimeMs: 'Combo-Anzeige ms',
+      moneyGrant: 'Geld geben'
+    };
+
+    function setParameterValue(path, value){
+      const keys = path.split('.');
+      const lastKey = keys.pop();
+      const parent = keys.reduce((target, key) => target[key], parameters);
+      parent[lastKey] = value;
+    }
+
+    function renderAdminParameters(){
+      const list = document.getElementById('admin-parameters-list');
+
+      if(!list){
+        return;
+      }
+
+      list.innerHTML = Object.entries(parameters).map(([groupKey, group]) => `
+        <div class="admin-parameter-group">
+          <div class="admin-parameter-title">${PARAMETER_GROUP_LABELS[groupKey] || groupKey}</div>
+          ${Object.entries(group).map(([key, value]) => {
+            if(value && typeof value === 'object'){
+              return Object.entries(value).map(([nestedKey, nestedValue]) => `
+                <label class="admin-parameter-row">
+                  <span>${key}.${PARAMETER_LABELS[nestedKey] || nestedKey}</span>
+                  <input class="admin-input admin-parameter-input" type="number" step="any" value="${nestedValue}" data-parameter-path="${groupKey}.${key}.${nestedKey}">
+                </label>
+              `).join('');
+            }
+
+            return `
+              <label class="admin-parameter-row">
+                <span>${PARAMETER_LABELS[key] || key}</span>
+                <input class="admin-input admin-parameter-input" type="number" step="any" value="${value}" data-parameter-path="${groupKey}.${key}">
+              </label>
+            `;
+          }).join('')}
+        </div>
+      `).join('');
+    }
+
     function resetGame(){
       storage.clear();
       achievementService.reset();
@@ -516,6 +572,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       for(const key of Object.keys(upgrades)){
         upgrades[key] = 0;
       }
+
+      mergeParameters(parameters, DEFAULT_GAME_PARAMETERS);
 
       preferences.theme = 'dark';
       preferences.colorMode = 'color';
@@ -543,7 +601,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function mkBall(x, y, vx = 0, vy = 0, template = null){
-      const r = template ? template.r : getBaseR() * (0.85 + Math.random() * 0.3);
+      const r = template ? template.r : getBaseR() * getRandomRadiusMultiplier();
       const col = template ? template.col : COLORS[hueIdx % COLORS.length];
 
       if(!template){
@@ -560,7 +618,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         vy = vy / speed * maxSpeed;
       }
 
-      const mass = template && Number.isFinite(template.m) ? template.m : r * r * 0.01;
+      const mass = template && Number.isFinite(template.m) ? template.m : r * r * parameters.balls.massFactor;
 
       return {
         id: template && Number.isFinite(template.id) ? template.id : objectIndex++,
@@ -582,9 +640,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     /* Diagramme */
 
-    const GRAPH_LENGTH = 120;
-    const collisionHistory = new Array(GRAPH_LENGTH).fill(0);
-    const moneyHistory = new Array(GRAPH_LENGTH).fill(0);
+    const collisionHistory = new Array(parameters.ui.graphLength).fill(0);
+    const moneyHistory = new Array(parameters.ui.graphLength).fill(0);
 
     let collisionMax = 0;
     let collisionSum = 0;
@@ -622,7 +679,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       canvasContext.beginPath();
       history.forEach((value, index) => {
-        const x = index / (GRAPH_LENGTH - 1) * GW;
+        const x = index / (parameters.ui.graphLength - 1) * GW;
         const y = GH - value / peak * (GH - 2) - 1;
 
         if(index === 0){
@@ -644,7 +701,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       canvasContext.beginPath();
       history.forEach((value, index) => {
-        const x = index / (GRAPH_LENGTH - 1) * GW;
+        const x = index / (parameters.ui.graphLength - 1) * GW;
         const y = GH - value / peak * (GH - 2) - 1;
 
         if(index === 0){
@@ -662,7 +719,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     function pushGraphSample(history, value){
       history.push(value);
 
-      if(history.length > GRAPH_LENGTH){
+      if(history.length > parameters.ui.graphLength){
         history.shift();
       }
     }
@@ -722,7 +779,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       startY: 0
     };
 
-    const MAX_DRAG = 160;
 
     function beginShot(event){
       if(objects.length >= getMaxBalls()){
@@ -786,9 +842,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       const replacementTemplate = replacementBalls.shift() || null;
 
-      if(distance < 4){
+      if(distance < parameters.balls.tapShotThreshold){
         const angle = Math.random() * Math.PI * 2;
-        const speed = (2 + Math.random() * 3) * getLaunchPowerMultiplier();
+        const speed = (parameters.balls.randomShotMinSpeed + Math.random() * parameters.balls.randomShotSpeedRange) * getLaunchPowerMultiplier();
 
         objects.push(
           mkBall(
@@ -800,10 +856,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           )
         );
       } else {
-        const clamped = Math.min(distance, MAX_DRAG);
+        const clamped = Math.min(distance, parameters.balls.maxDrag);
         const speed =
-          clamped / MAX_DRAG *
-          14 *
+          clamped / parameters.balls.maxDrag *
+          parameters.balls.aimedShotMaxSpeed *
           getLaunchPowerMultiplier();
 
         objects.push(
@@ -869,7 +925,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         if(isBorderSideActive(hit.side)){
           ball.collisions++;
           ballsPanelDirty = true;
-          onCollision(hit.x, hit.y, BORDER_COLLISION_VALUE);
+          onCollision(hit.x, hit.y, parameters.rewards.borderCollisionValue);
         }
       }
     }
@@ -955,10 +1011,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       if(getComboLevel() > 0){
 
-        if(now - state.lastComboT < 750){
+        if(now - state.lastComboT < parameters.rewards.comboWindowMs){
           state.comboCount = Math.min(
             state.comboCount + 1,
-            12 + getComboLevel()
+            parameters.rewards.comboBaseMax + getComboLevel()
           );
         } else {
           state.comboCount = 1;
@@ -966,12 +1022,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         state.lastComboT = now;
 
-        if(state.comboCount >= 3){
+        if(state.comboCount >= parameters.rewards.comboMinimumCount){
           const bonus =
             1 +
             Math.log2(state.comboCount - 1) *
-            0.16 *
-            Math.pow(getComboLevel(), 0.72);
+            parameters.rewards.comboBonusScale *
+            Math.pow(getComboLevel(), parameters.rewards.comboLevelExponent);
 
           earnedCoins *= bonus;
 
@@ -982,7 +1038,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
           setTimeout(() => {
             document.getElementById('combo-pill').style.opacity = '0';
-          }, 1200);
+          }, parameters.ui.comboPillLifetimeMs);
         }
       }
 
@@ -1013,14 +1069,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const now = performance.now();
 
       const nearbyFloat = activeFloatTexts.find(item => {
-        if(now - item.updatedAt > FLOAT_MERGE_WINDOW_MS){
+        if(now - item.updatedAt > parameters.ui.floatMergeWindowMs){
           return false;
         }
 
         const dx = item.x - screenX;
         const dy = item.y - screenY;
 
-        return dx * dx + dy * dy <= FLOAT_MERGE_DISTANCE * FLOAT_MERGE_DISTANCE;
+        return dx * dx + dy * dy <= parameters.ui.floatMergeDistance * parameters.ui.floatMergeDistance;
       });
 
       if(nearbyFloat){
@@ -1064,7 +1120,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         if(index >= 0){
           activeFloatTexts.splice(index, 1);
         }
-      }, 1200);
+      }, parameters.ui.floatLifetimeMs);
     }
 
     /* Zeichnen */
@@ -1220,9 +1276,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     /* Hauptschleife */
 
-    const FRAME_MS = 16.67;
-    const MAX_SIMULATION_DELTA = 3;
-    const MAX_CATCH_UP_MS = 30000;
 
     let lastTime = performance.now();
     let lastBackgroundTime = lastTime;
@@ -1269,7 +1322,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             y: ball.y
           });
 
-          if(ball.trail.length > 18){
+          if(ball.trail.length > parameters.balls.trailLength){
             ball.trail.shift();
           }
         }
@@ -1281,18 +1334,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     function simulateElapsed(elapsedMs, shouldDraw){
       const cappedElapsedMs = Math.min(
         Math.max(elapsedMs, 0),
-        MAX_CATCH_UP_MS
+        parameters.physics.maxCatchUpMs
       );
 
-      let remainingDelta = cappedElapsedMs / FRAME_MS;
+      let remainingDelta = cappedElapsedMs / parameters.physics.frameMs;
 
       while(remainingDelta > 0){
         const delta = Math.min(
           remainingDelta,
-          MAX_SIMULATION_DELTA
+          parameters.physics.maxSimulationDelta
         );
 
-        simulateStep(delta, shouldDraw && remainingDelta <= MAX_SIMULATION_DELTA);
+        simulateStep(delta, shouldDraw && remainingDelta <= parameters.physics.maxSimulationDelta);
         remainingDelta -= delta;
       }
     }
@@ -1314,7 +1367,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function updateCollisionRate(now){
-      if(now - state.lastColT <= 800){
+      if(now - state.lastColT <= parameters.ui.dashboardSampleMs){
         return;
       }
 
@@ -1371,9 +1424,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           dy * dy
         );
 
-        if(distance > 4){
-          const clamped = Math.min(distance, MAX_DRAG);
-          const power = clamped / MAX_DRAG;
+        if(distance > parameters.balls.tapShotThreshold){
+          const clamped = Math.min(distance, parameters.balls.maxDrag);
+          const power = clamped / parameters.balls.maxDrag;
           const radius = getBaseR();
 
           ctx.beginPath();
@@ -2002,11 +2055,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function getPrestigeCost(){
-      return Math.round(PRESTIGE_BASE_COST * Math.pow(PRESTIGE_COST_GROWTH, state.prestige || 0));
+      return Math.round(parameters.prestige.baseCost * Math.pow(parameters.prestige.costGrowth, state.prestige || 0));
     }
 
     function getNextGlobalMoneyMult(){
-      return getGlobalMoneyMult() + PRESTIGE_BASE_MULT_BONUS + getPrestigeOverflowBonus();
+      return getGlobalMoneyMult() + parameters.prestige.baseMultiplierBonus + getPrestigeOverflowBonus();
     }
 
     function performPrestige(){
@@ -2059,8 +2112,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     function grantAdminMoney(){
-      state.coins += 1000000;
-      state.moneyCount += 1000000;
+      state.coins += parameters.admin.moneyGrant;
+      state.moneyCount += parameters.admin.moneyGrant;
       updateUI();
       saveGame();
     }
@@ -2323,6 +2376,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       adminActions.hidden = !isUnlocked;
       adminCodeMessage.textContent = isUnlocked ? 'Admin Panel freigeschaltet.' : 'Code erforderlich.';
       adminCodeMessage.classList.toggle('is-error', false);
+
+      if(isUnlocked){
+        renderAdminParameters();
+      }
     }
 
     document
@@ -2367,6 +2424,40 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         button.setAttribute('aria-pressed', String(adminFreeUpgrades));
         document.getElementById('admin-free-upgrades-status').textContent = adminFreeUpgrades ? 'Aktiviert' : 'Deaktiviert';
         updateButtons();
+      });
+
+    document
+      .getElementById('admin-parameters-list')
+      .addEventListener('change', event => {
+        if(!adminUnlocked){
+          return;
+        }
+
+        const input = event.target as HTMLInputElement;
+
+        if(!input.matches('.admin-parameter-input')){
+          return;
+        }
+
+        const value = Number(input.value);
+
+        if(!Number.isFinite(value)){
+          return;
+        }
+
+        setParameterValue(input.dataset['parameterPath'], value);
+        resizeBallsToCurrentArena();
+        updateHintMsg();
+        updateUI();
+        document.getElementById('admin-parameters-message').textContent = `${input.dataset['parameterPath']} gespeichert.`;
+      });
+
+    document
+      .getElementById('btn-admin-reset-parameters')
+      .addEventListener('click', () => {
+        if(adminUnlocked && confirm('Alle Parameter auf Standardwerte zurücksetzen?')){
+          resetParameters();
+        }
       });
 
     document
@@ -2436,7 +2527,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    setInterval(saveGame, 5000);
+    setInterval(saveGame, parameters.ui.autosaveMs);
     window.addEventListener('beforeunload', saveGame);
 
     applyPreferences();
