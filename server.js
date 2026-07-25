@@ -130,8 +130,30 @@ function hashToken(token){
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-function normalizeName(name){
-  return String(name || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+function normalizeUsername(username){
+  return String(username || '').trim().slice(0, 24);
+}
+
+function hashPassword(password, salt){
+  return crypto.scryptSync(password, salt, 64).toString('hex');
+}
+
+function passwordMatches(password, salt, expectedHash){
+  const actual = Buffer.from(hashPassword(password, salt), 'hex');
+  const expected = Buffer.from(expectedHash, 'hex');
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+}
+
+const PROFILE_EMOJIS = new Set(['🙂', '😎', '🤩', '🥳', '🤖', '👾', '🐸', '🦊', '🐼', '🐵', '🦁', '🐯']);
+
+function normalizeEmoji(emoji){
+  return PROFILE_EMOJIS.has(emoji) ? emoji : '🙂';
+}
+
+async function createSession(userId){
+  const token = crypto.randomBytes(32).toString('hex');
+  await execute('INSERT INTO user_sessions (token_hash, user_id) VALUES (?, ?)', [hashToken(token), userId]);
+  return token;
 }
 
 function toNonNegativeInteger(value){
@@ -143,9 +165,9 @@ const LEADERBOARD_LIMIT = 25;
 
 async function getEntries(limit = LEADERBOARD_LIMIT){
   const result = await execute(`
-    SELECT p.id AS playerId, p.name, s.prestige, s.money, s.balls, s.updated_at AS updatedAt
+    SELECT u.id AS playerId, u.username AS name, u.profile_emoji AS emoji, s.prestige, s.money, s.balls, s.updated_at AS updatedAt
     FROM leaderboard_scores s
-    JOIN leaderboard_players p ON p.id = s.player_id
+    JOIN users u ON u.id = s.user_id
     ORDER BY s.prestige DESC, s.money DESC, s.balls DESC, s.updated_at ASC
     LIMIT ?
   `, [Math.min(LEADERBOARD_LIMIT, Math.max(1, toNonNegativeInteger(limit) || LEADERBOARD_LIMIT))]);
@@ -154,6 +176,7 @@ async function getEntries(limit = LEADERBOARD_LIMIT){
     rank: index + 1,
     playerId: row.playerId,
     name: row.name,
+    emoji: row.emoji,
     prestige: Number(row.prestige),
     money: Number(row.money),
     balls: Number(row.balls),
@@ -165,28 +188,55 @@ app.get('/api/health', (request, response) => {
   response.json({ ok: true });
 });
 
-app.post('/api/leaderboard/login', async (request, response, next) => {
+app.post('/api/leaderboard/register', async (request, response, next) => {
   try{
-    const name = normalizeName(request.body.name);
+    const username = normalizeUsername(request.body.username);
+    const password = String(request.body.password || '');
+    const emoji = normalizeEmoji(request.body.emoji);
 
-    if(name.length < 2){
-      response.status(400).json({ error: 'Name muss mindestens 2 Zeichen lang sein.' });
+    if(!/^[a-zA-Z0-9_.-]{2,24}$/.test(username)){
+      response.status(400).json({ error: 'Username: 2–24 Zeichen; erlaubt sind Buchstaben, Zahlen, Punkt, _ und -.' });
       return;
     }
-
-    const existing = await execute('SELECT id FROM leaderboard_players WHERE name = ?', [name]);
-
-    if(existing.rows.length > 0){
-      response.status(409).json({ error: 'Dieser Name ist bereits vergeben.' });
+    if(password.length < 8 || password.length > 128){
+      response.status(400).json({ error: 'Das Passwort muss 8–128 Zeichen lang sein.' });
       return;
     }
 
     const id = crypto.randomUUID();
-    const token = crypto.randomBytes(32).toString('hex');
+    const salt = crypto.randomBytes(16).toString('hex');
 
-    await execute('INSERT INTO leaderboard_players (id, name, token_hash) VALUES (?, ?, ?)', [id, name, hashToken(token)]);
+    try{
+      await execute('INSERT INTO users (id, username, password_hash, password_salt, profile_emoji) VALUES (?, ?, ?, ?, ?)', [id, username, hashPassword(password, salt), salt, emoji]);
+    } catch(error){
+      if(String(error.message).toLowerCase().includes('unique')){
+        response.status(409).json({ error: 'Dieser Username ist bereits vergeben.' });
+        return;
+      }
+      throw error;
+    }
 
-    response.status(201).json({ player: { id, name, token } });
+    const token = await createSession(id);
+    response.status(201).json({ player: { id, name: username, emoji, token } });
+  } catch(error){
+    next(error);
+  }
+});
+
+app.post('/api/leaderboard/login', async (request, response, next) => {
+  try{
+    const username = normalizeUsername(request.body.username);
+    const password = String(request.body.password || '');
+    const result = await execute('SELECT id, username, password_hash, password_salt, profile_emoji FROM users WHERE username = ?', [username]);
+    const user = result.rows[0];
+
+    if(!user || !passwordMatches(password, user.password_salt, user.password_hash)){
+      response.status(401).json({ error: 'Username oder Passwort ist falsch.' });
+      return;
+    }
+
+    const token = await createSession(user.id);
+    response.json({ player: { id: user.id, name: user.username, emoji: user.profile_emoji, token } });
   } catch(error){
     next(error);
   }
@@ -203,7 +253,7 @@ app.get('/api/leaderboard', async (request, response, next) => {
 app.post('/api/leaderboard/score', async (request, response, next) => {
   try{
     const { playerId, token } = request.body;
-    const player = await execute('SELECT id FROM leaderboard_players WHERE id = ? AND token_hash = ?', [playerId, hashToken(String(token || ''))]);
+    const player = await execute('SELECT user_id AS id FROM user_sessions WHERE user_id = ? AND token_hash = ?', [playerId, hashToken(String(token || ''))]);
 
     if(player.rows.length === 0){
       response.status(401).json({ error: 'Anmeldung ungültig. Bitte neu anmelden.' });
@@ -215,9 +265,9 @@ app.post('/api/leaderboard/score', async (request, response, next) => {
     const balls = toNonNegativeInteger(request.body.balls);
 
     await execute(`
-      INSERT INTO leaderboard_scores (player_id, prestige, money, balls)
+      INSERT INTO leaderboard_scores (user_id, prestige, money, balls)
       VALUES (?, ?, ?, ?)
-      ON CONFLICT(player_id) DO UPDATE SET
+      ON CONFLICT(user_id) DO UPDATE SET
         prestige = excluded.prestige,
         money = excluded.money,
         balls = excluded.balls,

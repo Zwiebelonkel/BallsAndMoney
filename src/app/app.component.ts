@@ -1987,6 +1987,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const LEADERBOARD_LIMIT = 25;
     let leaderboardPlayer = loadLeaderboardPlayer();
     let leaderboardBusy = false;
+    let leaderboardAuthMode: 'login' | 'register' = 'login';
 
     function getLeaderboardUrl(path){
       return `${LEADERBOARD_API_BASE}/api/leaderboard${path}`;
@@ -2033,6 +2034,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const loginBox = getElementById<HTMLElement>('leaderboard-login');
       const profileBox = getElementById<HTMLElement>('leaderboard-profile');
       const playerName = document.getElementById('leaderboard-player-name');
+      const playerEmoji = document.getElementById('leaderboard-player-emoji');
       const submitButton = getElementById<HTMLButtonElement>('btn-leaderboard-submit');
       const status = document.getElementById('leaderboard-status');
 
@@ -2041,6 +2043,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       submitButton.disabled = !isLoggedIn || leaderboardBusy;
       status.textContent = isLoggedIn ? `Angemeldet: ${leaderboardPlayer.name}` : 'Nicht angemeldet';
       playerName.textContent = isLoggedIn ? leaderboardPlayer.name : '-';
+      playerEmoji.textContent = isLoggedIn ? (leaderboardPlayer.emoji || '🙂') : '🙂';
     }
 
     function updateLeaderboardScoreUI(){
@@ -2069,8 +2072,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       `).join('');
 
       Array.from(list.querySelectorAll('.leaderboard-entry-name')).forEach((node, index) => {
-        node.textContent = entries[index].name;
+        node.textContent = `${entries[index].emoji || '🙂'} ${entries[index].name}`;
       });
+    }
+
+    function setLeaderboardAuthMode(mode: 'login' | 'register'){
+      leaderboardAuthMode = mode;
+      const isRegistration = mode === 'register';
+      getElementById<HTMLElement>('leaderboard-emoji-picker').hidden = !isRegistration;
+      getElementById<HTMLInputElement>('leaderboard-password-input').autocomplete = isRegistration ? 'new-password' : 'current-password';
+      document.getElementById('btn-leaderboard-login').textContent = isRegistration ? 'Account erstellen' : 'Anmelden';
+      document.getElementById('btn-auth-login-tab').classList.toggle('is-active', !isRegistration);
+      document.getElementById('btn-auth-register-tab').classList.toggle('is-active', isRegistration);
+      setLeaderboardMessage(isRegistration ? 'Erstelle deinen Account und wähle ein Profilbild.' : 'Melde dich mit deinem Account an.');
     }
 
     async function refreshLeaderboard(){
@@ -2107,21 +2121,25 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     async function loginLeaderboard(){
       const input = getElementById<HTMLInputElement>('leaderboard-name-input');
-      const name = input.value.trim();
+      const passwordInput = getElementById<HTMLInputElement>('leaderboard-password-input');
+      const username = input.value.trim();
+      const password = passwordInput.value;
 
-      if(name.length < 2){
-        setLeaderboardMessage('Bitte gib mindestens 2 Zeichen ein.', true);
+      if(username.length < 2 || password.length < 8){
+        setLeaderboardMessage('Username und Passwort (mindestens 8 Zeichen) sind erforderlich.', true);
         return;
       }
 
       try{
         leaderboardBusy = true;
         updateLeaderboardAuthUI();
-        setLeaderboardMessage('Anmeldung läuft ...');
-        const response = await fetch(getLeaderboardUrl('/login'), {
+        const registering = leaderboardAuthMode === 'register';
+        setLeaderboardMessage(registering ? 'Account wird erstellt ...' : 'Anmeldung läuft ...');
+        const selectedEmoji = document.querySelector<HTMLInputElement>('input[name="profile-emoji"]:checked')?.value || '🙂';
+        const response = await fetch(getLeaderboardUrl(registering ? '/register' : '/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
+          body: JSON.stringify({ username, password, ...(registering ? { emoji: selectedEmoji } : {}) })
         });
         const data = await response.json();
 
@@ -2131,6 +2149,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         saveLeaderboardPlayer(data.player);
         input.value = '';
+        passwordInput.value = '';
         setLeaderboardMessage('Angemeldet. Du kannst deinen Score senden.');
         await submitLeaderboardScore();
       } catch(error){
@@ -2562,7 +2581,16 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .getElementById('btn-leaderboard-login')
       .addEventListener('click', loginLeaderboard);
 
+    document.getElementById('btn-auth-login-tab').addEventListener('click', () => setLeaderboardAuthMode('login'));
+    document.getElementById('btn-auth-register-tab').addEventListener('click', () => setLeaderboardAuthMode('register'));
+
     getElementById<HTMLInputElement>('leaderboard-name-input').addEventListener('keydown', event => {
+      if(event.key === 'Enter'){
+        loginLeaderboard();
+      }
+    });
+
+    getElementById<HTMLInputElement>('leaderboard-password-input').addEventListener('keydown', event => {
       if(event.key === 'Enter'){
         loginLeaderboard();
       }

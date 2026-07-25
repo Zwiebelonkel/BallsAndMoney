@@ -974,10 +974,57 @@ app-achievement-panel{
   font-size:10px;
 }
 
-.leaderboard-login-row{
+.leaderboard-auth-tabs{
+  display:flex;
+  gap:6px;
+}
+
+.leaderboard-auth-tabs .is-active{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+
+.leaderboard-auth-submit{
+  padding:9px;
+  color:var(--accent);
+}
+
+.emoji-picker{
+  padding:8px;
+  border:0.5px solid var(--border);
+  border-radius:8px;
+}
+
+.emoji-picker legend{
+  padding:0 4px;
+  color:var(--muted-strong);
+  font-size:10px;
+}
+
+.emoji-options{
   display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:7px;
+  grid-template-columns:repeat(6,1fr);
+  gap:5px;
+}
+
+.emoji-options input{
+  position:absolute;
+  opacity:0;
+}
+
+.emoji-options span{
+  display:grid;
+  place-items:center;
+  padding:5px;
+  border:1px solid transparent;
+  border-radius:7px;
+  cursor:pointer;
+  font-size:20px;
+}
+
+.emoji-options input:checked + span{
+  border-color:var(--accent);
+  background:var(--surface-hover);
 }
 
 .leaderboard-input{
@@ -1013,6 +1060,13 @@ app-achievement-panel{
 .leaderboard-profile strong{
   color:var(--accent);
   font-family:ui-monospace,monospace;
+}
+
+.leaderboard-profile-emoji,
+.leaderboard-entry-emoji{
+  margin-right:4px;
+  font-size:18px;
+  vertical-align:middle;
 }
 
 .leaderboard-profile[hidden]{
