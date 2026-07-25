@@ -28,6 +28,7 @@ import { Component } from '@angular/core';
           <div>Aktueller Bonus: <strong id="prestige-current-mult">Global x1</strong></div>
           <div>Nach Prestige: <strong id="prestige-next-mult">Global x1.35</strong></div>
           <div>Kosten: <strong id="prestige-panel-cost">2.500.000 🪙</strong></div>
+          <div>Belohnung: <strong id="prestige-credit-reward">+1 🎟️</strong> für permanente Zoo-Tiere</div>
         </div>
 
         <button class="upgrade-btn danger" id="btn-prestige-confirm" type="button">

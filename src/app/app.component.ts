@@ -7,11 +7,13 @@ import { AchievementPanelComponent } from './achievement-panel.component';
 import { AchievementService } from './achievement.service';
 import { GameStorageService } from './game-storage.service';
 import { DEFAULT_GAME_PARAMETERS, cloneGameParameters } from './game-parameters';
+import { ZooPanelComponent } from './zoo-panel.component';
+import { ZOO_ANIMALS } from './zoo-animals';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [PrestigePanelComponent, SettingsPanelComponent, BallsPanelComponent, LeaderboardPanelComponent, AchievementPanelComponent],
+  imports: [PrestigePanelComponent, SettingsPanelComponent, BallsPanelComponent, LeaderboardPanelComponent, AchievementPanelComponent, ZooPanelComponent],
   templateUrl: './app.component.html'
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
@@ -197,6 +199,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       moneyCount: 0,
       prestige: 0,
       prestigeBonus: 0,
+      prestigeCredits: 0,
       comboCount: 0,
       lastComboT: 0
     };
@@ -214,6 +217,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       moneyAreaValue: 0
     };
     let adminFreeUpgrades = false;
+    const unlockedAnimals = new Set<string>();
+
+    function getZooIncome(){
+      return ZOO_ANIMALS.reduce(
+        (income, animal) => income + (unlockedAnimals.has(animal.id) ? animal.coinsPerSecond : 0),
+        0
+      );
+    }
 
     function getCost(key, level){
       const config = upgradeConfig[key];
@@ -428,8 +439,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         state: {
           coins: state.coins,
           prestige: state.prestige || 0,
-          prestigeBonus: state.prestigeBonus || 0
+          prestigeBonus: state.prestigeBonus || 0,
+          prestigeCredits: state.prestigeCredits || 0
         },
+        unlockedAnimals: [...unlockedAnimals],
         upgrades: { ...upgrades },
         preferences: { ...preferences },
         parameters: JSON.parse(JSON.stringify(parameters)),
@@ -531,6 +544,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         if(data.state && Number.isFinite(data.state.prestigeBonus)){
           state.prestigeBonus = data.state.prestigeBonus;
+        }
+
+        if(data.state && Number.isFinite(data.state.prestigeCredits)){
+          state.prestigeCredits = Math.max(0, Math.floor(data.state.prestigeCredits));
+        }
+
+        if(Array.isArray(data.unlockedAnimals)){
+          const knownIds = new Set(ZOO_ANIMALS.map(animal => animal.id));
+          for(const id of data.unlockedAnimals){
+            if(knownIds.has(id)) unlockedAnimals.add(id);
+          }
         }
 
         if(data.upgrades){
@@ -703,6 +727,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       state.moneyCount = 0;
       state.prestige = 0;
       state.prestigeBonus = 0;
+      state.prestigeCredits = 0;
+      unlockedAnimals.clear();
       state.comboCount = 0;
       state.lastComboT = 0;
 
@@ -735,6 +761,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       applyPreferences();
       updateUI();
+      renderZoo();
       updateHintMsg();
       saveGame();
     }
@@ -1545,6 +1572,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         parameters.physics.maxCatchUpMs
       );
 
+      const zooEarnings = getZooIncome() * cappedElapsedMs / 1000;
+      state.coins += zooEarnings;
+      state.moneyCount += zooEarnings;
+
       let remainingDelta = cappedElapsedMs / parameters.physics.frameMs;
 
       while(remainingDelta > 0){
@@ -1602,6 +1633,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       document.getElementById('col-val').textContent =
         formatCompactNumber(state.colPerSec);
+      document.getElementById('coins-val').textContent =
+        formatCompactNumber(state.coins);
     }
 
     function loop(now){
@@ -1719,7 +1752,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           ctx.font = '10px ui-monospace,monospace';
 
           ctx.fillText(
-            Math.round(power * 100) + '%',
+            `${Math.round(power * 100)}% · ${Math.round(Math.atan2(ny, nx) * 180 / Math.PI)}°`,
             drag.startX + 8,
             drag.startY - radius - 6
           );
@@ -2269,6 +2302,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         `Global x${getNextGlobalMoneyMult().toLocaleString('de-DE', { maximumFractionDigits: 2 })}`;
       document.getElementById('prestige-panel-cost').textContent =
         formatCompactNumber(prestigeCost) + ' 🪙';
+      document.getElementById('prestige-credit-reward').textContent = '+1 🎟️';
       const prestigeConfirmButton = getElementById<HTMLButtonElement>('btn-prestige-confirm');
       prestigeConfirmButton.disabled = false;
       prestigeConfirmButton.className =
@@ -2299,6 +2333,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       state.prestigeBonus = (state.prestigeBonus || 0) + getPrestigeOverflowBonus();
       state.prestige = (state.prestige || 0) + 1;
+      state.prestigeCredits = (state.prestigeCredits || 0) + 1;
       state.coins = 0;
       state.colPerSec = 0;
       state.moneyPerSec = 0;
@@ -2328,6 +2363,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       moneyHistory.fill(0);
 
       updateUI();
+      renderZoo();
       updateHintMsg();
       saveGame();
 
@@ -2515,6 +2551,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     const closePrestigePanel = bindSlidePanel('btn-prestige', 'prestige-panel', 'btn-prestige-close');
+    bindSlidePanel('btn-zoo', 'zoo-panel', 'btn-zoo-close', renderZoo);
     const closeSettingsPanel = bindSlidePanel('btn-settings-toggle', 'settings-panel', 'btn-settings-close');
     bindSlidePanel('btn-balls-toggle', 'balls-panel', 'btn-balls-close');
     bindSlidePanel('btn-admin-toggle', 'admin-panel', 'btn-admin-close');
@@ -2608,6 +2645,34 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           closePrestigePanel();
         }
       });
+
+    function renderZoo(){
+      const income = getZooIncome();
+      document.getElementById('zoo-credits').textContent = formatCompactNumber(state.prestigeCredits || 0);
+      document.getElementById('zoo-income').textContent = formatCompactNumber(income);
+      document.getElementById('zoo-shop-summary').textContent = `${unlockedAnimals.size}/${ZOO_ANIMALS.length} Tiere · ${formatCompactNumber(income)} 🪙/s`;
+
+      for(const animal of ZOO_ANIMALS){
+        const button = document.querySelector(`[data-animal-id="${animal.id}"]`) as HTMLButtonElement;
+        const unlocked = unlockedAnimals.has(animal.id);
+        button.disabled = unlocked || state.prestigeCredits < animal.cost;
+        button.classList.toggle('is-unlocked', unlocked);
+        button.textContent = unlocked ? 'Freigeschaltet ✓' : `${animal.cost} 🎟️`;
+        button.closest('.zoo-animal')?.classList.toggle('is-unlocked', unlocked);
+      }
+    }
+
+    document.getElementById('zoo-list').addEventListener('click', event => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.zoo-buy');
+      if(!button) return;
+      const animal = ZOO_ANIMALS.find(candidate => candidate.id === button.dataset['animalId']);
+      if(!animal || unlockedAnimals.has(animal.id) || state.prestigeCredits < animal.cost) return;
+      state.prestigeCredits -= animal.cost;
+      unlockedAnimals.add(animal.id);
+      renderZoo();
+      updateUI();
+      saveGame();
+    });
 
     const adminCode = '1906';
     const adminCodeInput = getElementById<HTMLInputElement>('admin-code-input');
@@ -2778,6 +2843,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     applyPreferences();
     updateUI();
+    renderZoo();
     updateHintMsg();
     renderBallsPanel(true);
 
