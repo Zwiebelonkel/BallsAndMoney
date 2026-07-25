@@ -56,14 +56,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const parameters = cloneGameParameters();
     const activeFloatTexts = [];
 
-    function setInitialCanvasSize(){
-      if(window.matchMedia('(max-width: 720px)').matches){
-        const viewportWidth = Math.max(1, Math.round(window.innerWidth));
-        document.documentElement.style.setProperty(
-          '--mobile-canvas-size',
-          `${viewportWidth}px`
-        );
-      }
+    function resizeCanvasToWrap(preservePositions = true){
+      const previousW = W;
+      const previousH = H;
+      const viewportWidth = Math.max(1, Math.round(window.innerWidth));
+      document.documentElement.style.setProperty(
+        '--mobile-canvas-size',
+        `${viewportWidth}px`
+      );
 
       const rect = wrap.getBoundingClientRect();
 
@@ -85,9 +85,25 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         0,
         0
       );
+
+      if(preservePositions && previousW > 0 && previousH > 0){
+        const scaleX = W / previousW;
+        const scaleY = H / previousH;
+
+        for(const ball of objects){
+          ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x * scaleX));
+          ball.y = Math.max(ball.r, Math.min(H - ball.r, ball.y * scaleY));
+          ball.trail = [];
+        }
+
+        for(const area of moneyAreas){
+          area.x = Math.max(area.r, Math.min(W - area.r, area.x * scaleX));
+          area.y = Math.max(area.r, Math.min(H - area.r, area.y * scaleY));
+        }
+      }
     }
 
-    setInitialCanvasSize();
+    resizeCanvasToWrap(false);
 
 
     function blockBrowserZoom(){
@@ -123,6 +139,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       theme: 'dark',
       colorMode: 'color',
       graphVisible: true,
+      responsiveCanvas: false,
       ballTrailsVisible: true,
       moneyPopupsVisible: true
     };
@@ -173,9 +190,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       document.body.classList.toggle('theme-light', preferences.theme === 'light');
       document.body.classList.toggle('graph-hidden', !preferences.graphVisible);
       document.body.classList.toggle('mono-mode', preferences.colorMode === 'mono');
+      document.body.classList.toggle('responsive-canvas', preferences.responsiveCanvas);
       document.getElementById('theme-val').textContent = preferences.theme === 'light' ? 'Light' : 'Dark';
       document.getElementById('color-mode-val').textContent = preferences.colorMode === 'mono' ? 'Schwarz-Weiß' : 'Farben aktiv';
       document.getElementById('graph-val').textContent = preferences.graphVisible ? 'Sichtbar' : 'Ausgeblendet';
+      document.getElementById('responsive-canvas-val').textContent = preferences.responsiveCanvas ? 'Aktiv' : 'Aus';
+      document.getElementById('btn-responsive-canvas').setAttribute('aria-pressed', String(preferences.responsiveCanvas));
       document.getElementById('ball-trails-val').textContent = preferences.ballTrailsVisible ? 'Aktiv' : 'Aus';
       document.getElementById('money-popups-val').textContent = preferences.moneyPopupsVisible ? 'Aktiv' : 'Aus';
 
@@ -743,6 +763,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       preferences.theme = 'dark';
       preferences.colorMode = 'color';
       preferences.graphVisible = true;
+      preferences.responsiveCanvas = false;
       preferences.ballTrailsVisible = true;
       preferences.moneyPopupsVisible = true;
       objects = [];
@@ -2821,6 +2842,15 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       });
 
     document
+      .getElementById('btn-responsive-canvas')
+      .addEventListener('click', () => {
+        preferences.responsiveCanvas = !preferences.responsiveCanvas;
+        applyPreferences();
+        requestAnimationFrame(() => resizeCanvasToWrap());
+        saveGame();
+      });
+
+    document
       .getElementById('btn-ball-trails')
       .addEventListener('click', () => {
         preferences.ballTrailsVisible = !preferences.ballTrailsVisible;
@@ -2866,7 +2896,25 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     setInterval(saveGame, parameters.ui.autosaveMs);
     window.addEventListener('beforeunload', saveGame);
 
+    let resizeFrame = 0;
+    const handleWindowResize = () => {
+      if(!preferences.responsiveCanvas && !window.matchMedia('(max-width: 720px)').matches){
+        return;
+      }
+
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => resizeCanvasToWrap());
+    };
+    window.addEventListener('resize', handleWindowResize);
+    this.cleanupCallbacks.push(() => {
+      cancelAnimationFrame(resizeFrame);
+      window.removeEventListener('resize', handleWindowResize);
+    });
+
     applyPreferences();
+    if(preferences.responsiveCanvas){
+      requestAnimationFrame(() => resizeCanvasToWrap());
+    }
     updateUI();
     renderZoo();
     updateHintMsg();

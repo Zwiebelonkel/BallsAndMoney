@@ -94,6 +94,21 @@ canvas{
   touch-action:none;
 }
 
+@media (min-width:721px){
+  body.responsive-canvas #root{
+    width:100vw;
+    min-width:0;
+  }
+
+  body.responsive-canvas #canvas-wrap{
+    flex-basis:min(calc(100vw - 200px), calc(100vh * 16 / 9));
+    width:min(calc(100vw - 200px), calc(100vh * 16 / 9));
+    min-width:0;
+    height:min(100vh, calc((100vw - 200px) * 9 / 16));
+    min-height:0;
+  }
+}
+
 canvas{
   display:block;
   width:100%;
