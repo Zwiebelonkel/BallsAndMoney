@@ -298,13 +298,60 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       ) * getGlobalMoneyMult());
     }
 
+    function findMoneyAreaPosition(radius, placedAreas = moneyAreas){
+      const minX = radius;
+      const maxX = W - radius;
+      const minY = radius;
+      const maxY = H - radius;
+
+      if(maxX < minX || maxY < minY){
+        return null;
+      }
+
+      const isFree = (x, y) => placedAreas.every(area => {
+        const dx = x - area.x;
+        const dy = y - area.y;
+        const minimumDistance = radius + area.r;
+
+        return dx * dx + dy * dy >= minimumDistance * minimumDistance;
+      });
+
+      for(let attempt = 0; attempt < 200; attempt++){
+        const x = minX + Math.random() * Math.max(0, maxX - minX);
+        const y = minY + Math.random() * Math.max(0, maxY - minY);
+
+        if(isFree(x, y)){
+          return { x, y };
+        }
+      }
+
+      // A deterministic fallback avoids a failed placement when the random
+      // attempts happen to miss one of the remaining gaps.
+      const step = Math.max(4, radius / 4);
+
+      for(let y = minY; y <= maxY; y += step){
+        for(let x = minX; x <= maxX; x += step){
+          if(isFree(x, y)){
+            return { x, y };
+          }
+        }
+      }
+
+      return null;
+    }
+
     function createMoneyArea(){
       const radius = parameters.rewards.moneyAreaRadius;
+      const position = findMoneyAreaPosition(radius);
+
+      if(!position){
+        return null;
+      }
 
       return {
         id: moneyAreaIndex++,
-        x: radius + Math.random() * Math.max(1, W - radius * 2),
-        y: radius + Math.random() * Math.max(1, H - radius * 2),
+        x: position.x,
+        y: position.y,
         r: radius,
         lastHits: {}
       };
@@ -312,12 +359,47 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     function syncMoneyAreas(){
       while(moneyAreas.length < upgrades.moneyAreaCount){
-        moneyAreas.push(createMoneyArea());
+        const area = createMoneyArea();
+
+        if(!area){
+          break;
+        }
+
+        moneyAreas.push(area);
       }
 
       if(moneyAreas.length > upgrades.moneyAreaCount){
         moneyAreas = moneyAreas.slice(0, upgrades.moneyAreaCount);
       }
+    }
+
+    function separateMoneyAreas(){
+      const placedAreas = [];
+
+      for(const area of moneyAreas){
+        const overlapsPlacedArea = placedAreas.some(placedArea => {
+          const dx = area.x - placedArea.x;
+          const dy = area.y - placedArea.y;
+          const minimumDistance = area.r + placedArea.r;
+
+          return dx * dx + dy * dy < minimumDistance * minimumDistance;
+        });
+
+        if(overlapsPlacedArea){
+          const position = findMoneyAreaPosition(area.r, placedAreas);
+
+          if(!position){
+            continue;
+          }
+
+          area.x = position.x;
+          area.y = position.y;
+        }
+
+        placedAreas.push(area);
+      }
+
+      moneyAreas = placedAreas;
     }
 
     function getLaunchPowerMultiplier(){
@@ -487,6 +569,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             area.x = Math.max(area.r, Math.min(W - area.r, area.x));
             area.y = Math.max(area.r, Math.min(H - area.r, area.y));
           }
+
+          separateMoneyAreas();
         }
 
         syncMoneyAreas();
