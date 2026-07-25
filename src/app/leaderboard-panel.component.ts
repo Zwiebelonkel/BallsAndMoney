@@ -8,7 +8,7 @@ import { Component } from '@angular/core';
 
     <button class="upgrade-btn" id="btn-leaderboard" type="button" aria-expanded="false" aria-controls="leaderboard-panel">
       <div class="btn-name">Leaderboard</div>
-      <div class="btn-desc">Anmelden, Score senden und Top-Spieler sehen</div>
+      <div class="btn-desc">Account erstellen, anmelden und Top-Spieler sehen</div>
       <div class="btn-cost" id="leaderboard-status">Nicht angemeldet</div>
     </button>
 
@@ -25,15 +25,36 @@ import { Component } from '@angular/core';
         </div>
 
         <div class="leaderboard-login" id="leaderboard-login">
-          <label class="leaderboard-label" for="leaderboard-name-input">Spielername</label>
-          <div class="leaderboard-login-row">
-            <input class="leaderboard-input" id="leaderboard-name-input" type="text" maxlength="24" autocomplete="nickname" placeholder="Dein Name">
-            <button class="ball-toggle" id="btn-leaderboard-login" type="button">Anmelden</button>
+          <div class="leaderboard-auth-tabs" role="tablist" aria-label="Account-Zugang">
+            <button class="ball-toggle is-active" id="btn-auth-login-tab" type="button">Login</button>
+            <button class="ball-toggle" id="btn-auth-register-tab" type="button">Registrieren</button>
           </div>
+          <label class="leaderboard-label" for="leaderboard-name-input">Username</label>
+          <input class="leaderboard-input" id="leaderboard-name-input" type="text" minlength="2" maxlength="24" autocomplete="username" placeholder="Dein Username">
+          <label class="leaderboard-label" for="leaderboard-password-input">Passwort</label>
+          <input class="leaderboard-input" id="leaderboard-password-input" type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="Mindestens 8 Zeichen">
+          <fieldset class="emoji-picker" id="leaderboard-emoji-picker" hidden>
+            <legend>Profilbild auswählen</legend>
+            <div class="emoji-options">
+              <label><input type="radio" name="profile-emoji" value="🙂" checked><span>🙂</span></label>
+              <label><input type="radio" name="profile-emoji" value="😎"><span>😎</span></label>
+              <label><input type="radio" name="profile-emoji" value="🤩"><span>🤩</span></label>
+              <label><input type="radio" name="profile-emoji" value="🥳"><span>🥳</span></label>
+              <label><input type="radio" name="profile-emoji" value="🤖"><span>🤖</span></label>
+              <label><input type="radio" name="profile-emoji" value="👾"><span>👾</span></label>
+              <label><input type="radio" name="profile-emoji" value="🐸"><span>🐸</span></label>
+              <label><input type="radio" name="profile-emoji" value="🦊"><span>🦊</span></label>
+              <label><input type="radio" name="profile-emoji" value="🐼"><span>🐼</span></label>
+              <label><input type="radio" name="profile-emoji" value="🐵"><span>🐵</span></label>
+              <label><input type="radio" name="profile-emoji" value="🦁"><span>🦁</span></label>
+              <label><input type="radio" name="profile-emoji" value="🐯"><span>🐯</span></label>
+            </div>
+          </fieldset>
+          <button class="ball-toggle leaderboard-auth-submit" id="btn-leaderboard-login" type="button">Anmelden</button>
         </div>
 
         <div class="leaderboard-profile" id="leaderboard-profile" hidden>
-          <div>Angemeldet als <strong id="leaderboard-player-name">-</strong></div>
+          <div><span class="leaderboard-profile-emoji" id="leaderboard-player-emoji">🙂</span> Angemeldet als <strong id="leaderboard-player-name">-</strong></div>
           <button class="ball-toggle" id="btn-leaderboard-logout" type="button">Abmelden</button>
         </div>
 
