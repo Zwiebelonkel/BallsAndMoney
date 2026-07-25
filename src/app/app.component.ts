@@ -197,6 +197,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       lastColT: performance.now(),
       colCount: 0,
       moneyCount: 0,
+      moneySourceCount: { collisions: 0, moneyAreas: 0, animals: 0 },
+      moneySourcePerSec: { collisions: 0, moneyAreas: 0, animals: 0 },
       prestige: 0,
       prestigeBonus: 0,
       prestigeCredits: 0,
@@ -758,6 +760,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       moneySum = 0;
       moneySamples = 0;
       moneyHistory.fill(0);
+      collisionMoneyHistory.fill(0);
+      moneyAreaHistory.fill(0);
+      animalMoneyHistory.fill(0);
 
       applyPreferences();
       updateUI();
@@ -808,6 +813,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     const collisionHistory = new Array(parameters.ui.graphLength).fill(0);
     const moneyHistory = new Array(parameters.ui.graphLength).fill(0);
+    const collisionMoneyHistory = new Array(parameters.ui.graphLength).fill(0);
+    const moneyAreaHistory = new Array(parameters.ui.graphLength).fill(0);
+    const animalMoneyHistory = new Array(parameters.ui.graphLength).fill(0);
 
     let collisionMax = 0;
     let collisionSum = 0;
@@ -823,7 +831,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     loadGame();
 
-    function drawGraph(canvasContext, canvasElement, history, color){
+    function drawGraph(canvasContext, canvasElement, series){
       const GW = canvasElement.width;
       const GH = canvasElement.height;
 
@@ -841,45 +849,22 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         canvasContext.stroke();
       }
 
-      const peak = Math.max(...history, 1);
+      const peak = Math.max(...series.flatMap(item => item.history), 1);
 
-      canvasContext.beginPath();
-      history.forEach((value, index) => {
-        const x = index / (parameters.ui.graphLength - 1) * GW;
-        const y = GH - value / peak * (GH - 2) - 1;
-
-        if(index === 0){
-          canvasContext.moveTo(x, y);
-        } else {
-          canvasContext.lineTo(x, y);
-        }
+      series.forEach((item, seriesIndex) => {
+        canvasContext.beginPath();
+        item.history.forEach((value, index) => {
+          const x = index / (parameters.ui.graphLength - 1) * GW;
+          const y = GH - value / peak * (GH - 2) - 1;
+          if(index === 0) canvasContext.moveTo(x, y);
+          else canvasContext.lineTo(x, y);
+        });
+        canvasContext.strokeStyle = preferences.colorMode === 'mono' ? getMonoInkColor() : item.color;
+        canvasContext.globalAlpha = preferences.colorMode === 'mono' ? 1 - seriesIndex * 0.18 : 1;
+        canvasContext.lineWidth = item.primary ? 2 : 1.25;
+        canvasContext.stroke();
       });
-
-      canvasContext.lineTo(GW, GH);
-      canvasContext.lineTo(0, GH);
-      canvasContext.closePath();
-
-      const gradient = canvasContext.createLinearGradient(0, 0, 0, GH);
-      gradient.addColorStop(0, preferences.colorMode === 'mono' ? getMonoSoftColor(0.28) : color.fill);
-      gradient.addColorStop(1, preferences.colorMode === 'mono' ? getMonoSoftColor(0.02) : color.fade);
-      canvasContext.fillStyle = gradient;
-      canvasContext.fill();
-
-      canvasContext.beginPath();
-      history.forEach((value, index) => {
-        const x = index / (parameters.ui.graphLength - 1) * GW;
-        const y = GH - value / peak * (GH - 2) - 1;
-
-        if(index === 0){
-          canvasContext.moveTo(x, y);
-        } else {
-          canvasContext.lineTo(x, y);
-        }
-      });
-
-      canvasContext.strokeStyle = preferences.colorMode === 'mono' ? getMonoInkColor() : color.line;
-      canvasContext.lineWidth = 1.5;
-      canvasContext.stroke();
+      canvasContext.globalAlpha = 1;
     }
 
     function pushGraphSample(history, value){
@@ -893,6 +878,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     function drawDashboard(){
       pushGraphSample(collisionHistory, state.colPerSec);
       pushGraphSample(moneyHistory, state.moneyPerSec);
+      pushGraphSample(collisionMoneyHistory, state.moneySourcePerSec.collisions);
+      pushGraphSample(moneyAreaHistory, state.moneySourcePerSec.moneyAreas);
+      pushGraphSample(animalMoneyHistory, state.moneySourcePerSec.animals);
 
       collisionMax = Math.max(collisionMax, state.colPerSec);
       collisionSum += state.colPerSec;
@@ -905,17 +893,16 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const collisionAverage = collisionSamples > 0 ? collisionSum / collisionSamples : 0;
       const moneyAverage = moneySamples > 0 ? moneySum / moneySamples : 0;
 
-      drawGraph(collisionGraphCtx, collisionGraphCanvas, collisionHistory, {
-        line: '#9FE1CB',
-        fill: 'rgba(159,225,203,0.35)',
-        fade: 'rgba(159,225,203,0.02)'
-      });
+      drawGraph(collisionGraphCtx, collisionGraphCanvas, [
+        { history: collisionHistory, color: '#9FE1CB', primary: true }
+      ]);
 
-      drawGraph(moneyGraphCtx, moneyGraphCanvas, moneyHistory, {
-        line: '#FAC775',
-        fill: 'rgba(250,199,117,0.35)',
-        fade: 'rgba(250,199,117,0.02)'
-      });
+      drawGraph(moneyGraphCtx, moneyGraphCanvas, [
+        { history: moneyHistory, color: '#FAC775', primary: true },
+        { history: collisionMoneyHistory, color: '#9FE1CB' },
+        { history: moneyAreaHistory, color: '#7FA9FF' },
+        { history: animalMoneyHistory, color: '#D89BFF' }
+      ]);
 
       document.getElementById('dash-collisions').textContent =
         formatCompactNumber(state.colPerSec);
@@ -1191,14 +1178,15 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         }
 
         area.lastHits[ball.id] = now;
-        grantMoneyAt(area.x, area.y, getMoneyAreaValue());
+        grantMoneyAt(area.x, area.y, getMoneyAreaValue(), 'moneyAreas');
       }
     }
 
-    function grantMoneyAt(x, y, amount){
+    function grantMoneyAt(x, y, amount, source = null){
       const earnedCoins = Math.max(1, Math.ceil(amount));
       state.coins += earnedCoins;
       state.moneyCount += earnedCoins;
+      if(source) state.moneySourceCount[source] += earnedCoins;
 
       if(preferences.moneyPopupsVisible){
         spawnFloat(x, y, earnedCoins);
@@ -1250,7 +1238,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       earnedCoins = Math.ceil(earnedCoins);
 
-      grantMoneyAt(x, y, earnedCoins);
+      grantMoneyAt(x, y, earnedCoins, 'collisions');
     }
 
     function clearFloatTexts(){
@@ -1575,6 +1563,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const zooEarnings = getZooIncome() * cappedElapsedMs / 1000;
       state.coins += zooEarnings;
       state.moneyCount += zooEarnings;
+      state.moneySourceCount.animals += zooEarnings;
 
       let remainingDelta = cappedElapsedMs / parameters.physics.frameMs;
 
@@ -1626,6 +1615,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           state.moneyCount /
           elapsed
         );
+
+      for(const source of Object.keys(state.moneySourceCount)){
+        state.moneySourcePerSec[source] = Math.round(state.moneySourceCount[source] / elapsed);
+        state.moneySourceCount[source] = 0;
+      }
 
       state.colCount = 0;
       state.moneyCount = 0;
@@ -2380,6 +2374,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       moneySum = 0;
       moneySamples = 0;
       moneyHistory.fill(0);
+      collisionMoneyHistory.fill(0);
+      moneyAreaHistory.fill(0);
+      animalMoneyHistory.fill(0);
 
       updateUI();
       renderZoo();
