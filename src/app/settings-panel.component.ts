@@ -38,6 +38,11 @@ import { AdminPanelComponent } from './admin-panel.component';
           <span class="setting-value" id="graph-val">Sichtbar</span>
         </button>
 
+        <button class="setting-btn" id="btn-responsive-canvas" type="button" aria-pressed="false">
+          Responsive Canvas
+          <span class="setting-value" id="responsive-canvas-val">Aus</span>
+        </button>
+
         <button class="setting-btn" id="btn-ball-trails" type="button">
           Ball-Traverse umschalten
           <span class="setting-value" id="ball-trails-val">Aktiv</span>
