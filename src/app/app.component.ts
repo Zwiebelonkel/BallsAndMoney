@@ -240,6 +240,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     };
     let adminFreeUpgrades = false;
     const unlockedAnimals = new Set<string>();
+    const creditedAchievements = new Set<string>();
 
     function getZooIncome(){
       return ZOO_ANIMALS.reduce(
@@ -465,6 +466,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           prestigeCredits: state.prestigeCredits || 0
         },
         unlockedAnimals: [...unlockedAnimals],
+        creditedAchievements: [...creditedAchievements],
         upgrades: { ...upgrades },
         preferences: { ...preferences },
         parameters: JSON.parse(JSON.stringify(parameters)),
@@ -576,6 +578,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           const knownIds = new Set(ZOO_ANIMALS.map(animal => animal.id));
           for(const id of data.unlockedAnimals){
             if(knownIds.has(id)) unlockedAnimals.add(id);
+          }
+        }
+
+        if(Array.isArray(data.creditedAchievements)){
+          for(const id of data.creditedAchievements){
+            if(typeof id === 'string') creditedAchievements.add(id);
           }
         }
 
@@ -751,6 +759,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       state.prestigeBonus = 0;
       state.prestigeCredits = 0;
       unlockedAnimals.clear();
+      creditedAchievements.clear();
       state.comboCount = 0;
       state.lastComboT = 0;
 
@@ -780,7 +789,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       moneyMax = 0;
       moneySum = 0;
       moneySamples = 0;
-      moneyHistory.fill(0);
       collisionMoneyHistory.fill(0);
       moneyAreaHistory.fill(0);
       animalMoneyHistory.fill(0);
@@ -833,7 +841,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     /* Diagramme */
 
     const collisionHistory = new Array(parameters.ui.graphLength).fill(0);
-    const moneyHistory = new Array(parameters.ui.graphLength).fill(0);
     const collisionMoneyHistory = new Array(parameters.ui.graphLength).fill(0);
     const moneyAreaHistory = new Array(parameters.ui.graphLength).fill(0);
     const animalMoneyHistory = new Array(parameters.ui.graphLength).fill(0);
@@ -851,6 +858,23 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const moneyGraphCtx = moneyGraphCanvas.getContext('2d');
 
     loadGame();
+
+    const achievementCreditSubscription = achievementService.achievements$.subscribe(achievements => {
+      const newlyCredited = achievements.filter(
+        achievement => achievement.unlocked && !creditedAchievements.has(achievement.id)
+      );
+
+      if(newlyCredited.length === 0) return;
+
+      for(const achievement of newlyCredited){
+        creditedAchievements.add(achievement.id);
+      }
+
+      state.prestigeCredits += newlyCredited.length;
+      renderZoo();
+      saveGame();
+    });
+    this.cleanupCallbacks.push(() => achievementCreditSubscription.unsubscribe());
 
     function drawGraph(canvasContext, canvasElement, series){
       const GW = canvasElement.width;
@@ -898,7 +922,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     function drawDashboard(){
       pushGraphSample(collisionHistory, state.colPerSec);
-      pushGraphSample(moneyHistory, state.moneyPerSec);
       pushGraphSample(collisionMoneyHistory, state.moneySourcePerSec.collisions);
       pushGraphSample(moneyAreaHistory, state.moneySourcePerSec.moneyAreas);
       pushGraphSample(animalMoneyHistory, state.moneySourcePerSec.animals);
@@ -919,8 +942,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       ]);
 
       drawGraph(moneyGraphCtx, moneyGraphCanvas, [
-        { history: moneyHistory, color: '#FAC775', primary: true },
-        { history: collisionMoneyHistory, color: '#9FE1CB' },
+        { history: collisionMoneyHistory, color: '#9FE1CB', primary: true },
         { history: moneyAreaHistory, color: '#7FA9FF' },
         { history: animalMoneyHistory, color: '#D89BFF' }
       ]);
@@ -2394,7 +2416,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       moneyMax = 0;
       moneySum = 0;
       moneySamples = 0;
-      moneyHistory.fill(0);
       collisionMoneyHistory.fill(0);
       moneyAreaHistory.fill(0);
       animalMoneyHistory.fill(0);
