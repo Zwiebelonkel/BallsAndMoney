@@ -431,6 +431,25 @@ app-zoo-panel{ display:contents; }
   margin-top:5px;
 }
 
+.money-graph-legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:3px 8px;
+  margin-top:5px;
+  font-size:8px;
+  color:var(--muted);
+}
+
+.money-graph-legend span::before{
+  content:'';
+  display:inline-block;
+  width:6px;
+  height:6px;
+  margin-right:3px;
+  border-radius:50%;
+  background:var(--series-color);
+}
+
 .dash-stat{
   font-size:9px;
   color:var(--muted);
