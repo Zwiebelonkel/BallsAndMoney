@@ -55,7 +55,7 @@ import { Component } from '@angular/core';
 
         <div class="leaderboard-profile" id="leaderboard-profile" hidden>
           <div><span class="leaderboard-profile-emoji" id="leaderboard-player-emoji">🙂</span> Angemeldet als <strong id="leaderboard-player-name">-</strong></div>
-          <button class="ball-toggle" id="btn-leaderboard-logout" type="button">Abmelden</button>
+          <button class="ball-toggle" id="btn-leaderboard-logout" type="button">Ausloggen</button>
         </div>
 
         <div class="leaderboard-message" id="leaderboard-message">Melde dich an, um deinen Score zu synchronisieren.</div>
