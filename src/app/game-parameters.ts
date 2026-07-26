@@ -6,7 +6,7 @@ export const DEFAULT_GAME_PARAMETERS = {
     combo: { baseCost: 280, growth: 1.58 },
     launch: { baseCost: 70, growth: 2.1 },
     border: { baseCost: 85000, growth: 9, maxLevel: 4 },
-    moneyAreaCount: { baseCost: 650, growth: 2.4, maxLevel: 8 },
+    moneyAreaCount: { baseCost: 650, growth: 2.4, maxLevel: 12 },
     moneyAreaValue: { baseCost: 1100, growth: 2.05 }
   },
   balls: {
@@ -44,7 +44,7 @@ export const DEFAULT_GAME_PARAMETERS = {
   },
   prestige: {
     baseCost: 2500000,
-    costGrowth: 1.5,
+    costGrowth: 1.7,
     baseMultiplierBonus: 0.35,
     overflowStep: 1000000,
     overflowBonus: 0.03,
