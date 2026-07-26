@@ -947,6 +947,26 @@ app-achievement-panel{
   color:var(--accent);
 }
 
+.achievement-claim{
+  padding:7px 9px;
+  border:1px solid rgba(250,199,117,0.45);
+  border-radius:8px;
+  background:rgba(250,199,117,0.12);
+  color:var(--accent);
+  font:inherit;
+  font-size:10px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.achievement-claim:hover{
+  background:rgba(250,199,117,0.2);
+}
+
+.prestige-claim{
+  margin-bottom:8px;
+}
+
 .achievement-toast{
   position:fixed;
   z-index:1000;

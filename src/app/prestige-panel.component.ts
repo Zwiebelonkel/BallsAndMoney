@@ -31,6 +31,11 @@ import { Component } from '@angular/core';
           <div>Belohnung: <strong id="prestige-credit-reward">+1 🎟️</strong> für permanente Zoo-Tiere</div>
         </div>
 
+        <button class="upgrade-btn prestige-claim" id="btn-prestige-credit-claim" type="button" disabled>
+          <div class="btn-name">Prestige-Credits abholen</div>
+          <div class="btn-desc" id="prestige-credit-pending">Keine Credits zur Abholung bereit</div>
+        </button>
+
         <button class="upgrade-btn danger" id="btn-prestige-confirm" type="button">
           <div class="btn-name">Prestige jetzt durchführen</div>
           <div class="btn-desc">Run zurücksetzen und permanenten Bonus erhalten</div>

@@ -20,7 +20,7 @@ import { Achievement, AchievementService } from './achievement.service';
         <div class="slide-panel-header">
           <div>
             <div class="slide-panel-title">Globale Erfolge</div>
-            <div class="slide-panel-copy">Jeder freigeschaltete Erfolg gibt +1 Prestige-Credit und bleibt auch nach einem Prestige erhalten.</div>
+            <div class="slide-panel-copy">Erfolge bleiben nach Prestige erhalten. Die gestaffelten Prestige-Credits musst du hier abholen.</div>
           </div>
           <button class="panel-close" id="btn-achievements-close" type="button" aria-label="Erfolge schließen">×</button>
         </div>
@@ -28,7 +28,16 @@ import { Achievement, AchievementService } from './achievement.service';
           <article class="achievement-row" *ngFor="let achievement of achievements" [class.is-unlocked]="achievement.unlocked">
             <span class="achievement-icon">{{ achievement.unlocked ? achievement.icon : '🔒' }}</span>
             <div><div class="achievement-title">{{ achievement.title }}</div><div class="achievement-copy">{{ achievement.description }}</div></div>
-            <span class="achievement-state">{{ achievement.unlocked ? 'Erreicht · +1 🎟️' : '+1 🎟️' }}</span>
+            <button
+              *ngIf="achievement.unlocked && !achievement.claimed; else achievementState"
+              class="achievement-claim"
+              type="button"
+              (click)="claim(achievement.id)">
+              +{{ achievement.reward }} 🎟️ abholen
+            </button>
+            <ng-template #achievementState>
+              <span class="achievement-state">{{ achievement.claimed ? 'Abgeholt ✓' : '+' + achievement.reward + ' 🎟️' }}</span>
+            </ng-template>
           </article>
         </div>
       </div>
@@ -36,7 +45,7 @@ import { Achievement, AchievementService } from './achievement.service';
 
     <div class="achievement-toast" *ngIf="toast" role="status" aria-live="polite">
       <span class="achievement-toast-icon">{{ toast.icon }}</span>
-      <div><strong>Erfolg freigeschaltet · +1 🎟️</strong><span>{{ toast.title }}</span></div>
+      <div><strong>Erfolg freigeschaltet · +{{ toast.reward }} 🎟️ bereit</strong><span>{{ toast.title }}</span></div>
     </div>
   `
 })
@@ -53,6 +62,10 @@ export class AchievementPanelComponent implements OnDestroy {
 
   get unlockedCount(): number {
     return this.achievements.filter(achievement => achievement.unlocked).length;
+  }
+
+  claim(id: string): void {
+    this.achievementService.requestClaim(id);
   }
 
   ngOnDestroy(): void {
