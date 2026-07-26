@@ -2074,22 +2074,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       const profileBox = getElementById<HTMLElement>('leaderboard-profile');
       const playerName = document.getElementById('leaderboard-player-name');
       const playerEmoji = document.getElementById('leaderboard-player-emoji');
-      const submitButton = getElementById<HTMLButtonElement>('btn-leaderboard-submit');
       const status = document.getElementById('leaderboard-status');
 
       loginBox.hidden = isLoggedIn;
       profileBox.hidden = !isLoggedIn;
-      submitButton.disabled = !isLoggedIn || leaderboardBusy;
       status.textContent = isLoggedIn ? `Angemeldet: ${leaderboardPlayer.name}` : 'Nicht angemeldet';
       playerName.textContent = isLoggedIn ? leaderboardPlayer.name : '-';
       playerEmoji.textContent = isLoggedIn ? (leaderboardPlayer.emoji || '🙂') : '🙂';
-    }
-
-    function updateLeaderboardScoreUI(){
-      const score = getLeaderboardPayload();
-      document.getElementById('leaderboard-current-score').textContent =
-        `Prestige ${formatCompactNumber(score.prestige)} · ${formatCompactNumber(score.money)} 🪙 · ${formatCompactNumber(score.balls)} Kugeln`;
-      updateLeaderboardAuthUI();
     }
 
     function renderLeaderboard(entries){
@@ -2144,7 +2135,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     async function openLeaderboard(){
-      updateLeaderboardScoreUI();
+      updateLeaderboardAuthUI();
 
       if(leaderboardBusy){
         return;
@@ -2244,7 +2235,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     function updateUI(){
       updateCoinsUI();
       renderBallsPanel();
-      updateLeaderboardScoreUI();
+      updateLeaderboardAuthUI();
       evaluateAchievements();
       queueSave();
     }
@@ -2651,14 +2642,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         saveLeaderboardPlayer(null);
         setLeaderboardMessage('Abgemeldet.');
       });
-
-    document
-      .getElementById('btn-leaderboard-submit')
-      .addEventListener('click', submitLeaderboardScore);
-
-    document
-      .getElementById('btn-leaderboard-refresh')
-      .addEventListener('click', refreshLeaderboard);
 
     document
       .getElementById('btn-balls-bulk-toggle')
