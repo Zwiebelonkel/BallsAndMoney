@@ -58,18 +58,7 @@ import { Component } from '@angular/core';
           <button class="ball-toggle" id="btn-leaderboard-logout" type="button">Abmelden</button>
         </div>
 
-        <div class="leaderboard-actions">
-          <button class="upgrade-btn can-afford" id="btn-leaderboard-submit" type="button">
-            <div class="btn-name">Score senden</div>
-            <div class="btn-desc" id="leaderboard-current-score">Prestige 0 · 0 🪙 · 0 Kugeln</div>
-          </button>
-          <button class="setting-btn" id="btn-leaderboard-refresh" type="button">
-            Leaderboard aktualisieren
-            <span class="setting-value">Top 25 laden</span>
-          </button>
-        </div>
-
-        <div class="leaderboard-message" id="leaderboard-message">Melde dich an, um deinen Score zu senden.</div>
+        <div class="leaderboard-message" id="leaderboard-message">Melde dich an, um deinen Score zu synchronisieren.</div>
 
         <div class="leaderboard-list" id="leaderboard-list" aria-live="polite"></div>
       </div>
