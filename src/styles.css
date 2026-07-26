@@ -1024,6 +1024,10 @@ app-achievement-panel{
   margin-bottom:8px;
 }
 
+.leaderboard-login[hidden]{
+  display:none;
+}
+
 .leaderboard-label,
 .leaderboard-message,
 .leaderboard-empty{
