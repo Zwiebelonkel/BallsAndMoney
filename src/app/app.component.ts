@@ -222,6 +222,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       prestige: 0,
       prestigeBonus: 0,
       prestigeCredits: 0,
+      pendingPrestigeCredits: 0,
       comboCount: 0,
       lastComboT: 0
     };
@@ -463,7 +464,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           coins: state.coins,
           prestige: state.prestige || 0,
           prestigeBonus: state.prestigeBonus || 0,
-          prestigeCredits: state.prestigeCredits || 0
+          prestigeCredits: state.prestigeCredits || 0,
+          pendingPrestigeCredits: state.pendingPrestigeCredits || 0
         },
         unlockedAnimals: [...unlockedAnimals],
         creditedAchievements: [...creditedAchievements],
@@ -572,6 +574,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         if(data.state && Number.isFinite(data.state.prestigeCredits)){
           state.prestigeCredits = Math.max(0, Math.floor(data.state.prestigeCredits));
+        }
+
+        if(data.state && Number.isFinite(data.state.pendingPrestigeCredits)){
+          state.pendingPrestigeCredits = Math.max(0, Math.floor(data.state.pendingPrestigeCredits));
         }
 
         if(Array.isArray(data.unlockedAnimals)){
@@ -758,6 +764,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       state.prestige = 0;
       state.prestigeBonus = 0;
       state.prestigeCredits = 0;
+      state.pendingPrestigeCredits = 0;
       unlockedAnimals.clear();
       creditedAchievements.clear();
       state.comboCount = 0;
@@ -858,19 +865,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const moneyGraphCtx = moneyGraphCanvas.getContext('2d');
 
     loadGame();
+    achievementService.setClaimed(creditedAchievements);
 
-    const achievementCreditSubscription = achievementService.achievements$.subscribe(achievements => {
-      const newlyCredited = achievements.filter(
-        achievement => achievement.unlocked && !creditedAchievements.has(achievement.id)
-      );
+    const achievementCreditSubscription = achievementService.claimRequested$.subscribe(achievement => {
+      if(creditedAchievements.has(achievement.id)) return;
 
-      if(newlyCredited.length === 0) return;
-
-      for(const achievement of newlyCredited){
-        creditedAchievements.add(achievement.id);
-      }
-
-      state.prestigeCredits += newlyCredited.length;
+      creditedAchievements.add(achievement.id);
+      state.prestigeCredits += achievement.reward;
+      achievementService.markClaimed(achievement.id);
       renderZoo();
       saveGame();
     });
@@ -2363,6 +2365,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       prestigeConfirmButton.disabled = false;
       prestigeConfirmButton.className =
         'upgrade-btn danger' + (coins >= prestigeCost ? ' can-afford' : '');
+
+      const pendingCredits = state.pendingPrestigeCredits || 0;
+      const prestigeClaimButton = getElementById<HTMLButtonElement>('btn-prestige-credit-claim');
+      prestigeClaimButton.disabled = pendingCredits === 0;
+      prestigeClaimButton.classList.toggle('can-afford', pendingCredits > 0);
+      document.getElementById('prestige-credit-pending').textContent = pendingCredits > 0
+        ? `+${pendingCredits} 🎟️ warten auf dich`
+        : 'Keine Credits zur Abholung bereit';
     }
 
     function getPrestigeCost(){
@@ -2389,7 +2399,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
       state.prestigeBonus = (state.prestigeBonus || 0) + getPrestigeOverflowBonus();
       state.prestige = (state.prestige || 0) + 1;
-      state.prestigeCredits = (state.prestigeCredits || 0) + 1;
+      state.pendingPrestigeCredits = (state.pendingPrestigeCredits || 0) + 1;
       state.coins = 0;
       state.colPerSec = 0;
       state.moneyPerSec = 0;
@@ -2711,6 +2721,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         if(performPrestige()){
           closePrestigePanel();
         }
+      });
+
+    document
+      .getElementById('btn-prestige-credit-claim')
+      .addEventListener('click', () => {
+        const pendingCredits = state.pendingPrestigeCredits || 0;
+        if(pendingCredits === 0) return;
+        state.prestigeCredits += pendingCredits;
+        state.pendingPrestigeCredits = 0;
+        renderZoo();
+        updateUI();
+        saveGame();
       });
 
     function renderZoo(){
