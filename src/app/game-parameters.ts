@@ -44,7 +44,7 @@ export const DEFAULT_GAME_PARAMETERS = {
   },
   prestige: {
     baseCost: 2500000,
-    costGrowth: 1.7,
+    costGrowth: 1.5,
     baseMultiplierBonus: 0.35,
     overflowStep: 1000000,
     overflowBonus: 0.03,
